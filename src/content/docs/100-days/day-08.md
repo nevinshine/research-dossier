@@ -1,47 +1,96 @@
 ---
 title: "Day 08: AI Anomaly Detection (DWN Research)"
-description: "Engineering a CPU-optimized Weightless Neural Network (WiSARD) for zero-overhead intrusion detection."
+description: "Exploring kernel-level anomaly detection using Differentiable Weightless Neural Networks (DWN)."
 sidebar:
   order: 9
 ---
 
 ### // Objective
-**To break the dependency on GPUs for AI Security.**
-Standard Deep Learning (CNNs/Transformers) is too heavy for standard Linux servers. My goal was to build a lightweight **Weightless Neural Network (WiSARD)** that can detect attacks on a CPU with negligible latency.
+**To explore lightweight, behavior-based anomaly detection without deep neural networks.**
+
+Modern AI security often depends on heavy deep-learning models (CNNs, LSTMs, Transformers) that require GPUs and large datasets.  
+The objective of this day was to study and prototype a **Weightless Neural Network (WiSARD-style)** approach that can model *program behavior* using **binary representations** and run efficiently on **CPU-only systems**.
 
 :::tip[Source Code]
-The full implementation of this AI engine is hosted in the dedicated research repository:
-👉 **[View Sentinel Sandbox Source Code](https://github.com/nevinshine/sentinel-sandbox)**
+The full research prototype and experiments are maintained here:
+👉 **[Sentinel Sandbox – Research Repository](https://github.com/nevinshine/sentinel-sandbox)**
 :::
+
+---
 
 ### // The Architecture: Dynamic Weightless Network (DWN)
 
-Unlike traditional neurons that multiply float values (requiring GPUs), a Weightless Neural Network uses **RAM-based lookup tables**. It "learns" by memorizing patterns in binary address spaces.
+A **Weightless Neural Network (WNN)** does not rely on floating-point multiplications or learned weights.  
+Instead, it operates using **lookup tables (RAM nodes)** that map binary input patterns to stored responses.
 
+In this work, I explored a **Dynamic Weightless Network (DWN)** variant that allows training via gradient-based methods while preserving discrete, logic-based inference.
 
+---
 
-#### Key Engineering Decisions:
-1.  **Thermometer Encoding:**
-    * *Challenge:* How to convert continuous data (like "packet size = 1500") into binary for the network?
-    * *Solution:* Implemented "Thermometer Encoding." A value of `3` becomes `11100`, while `5` becomes `11111`. This preserves the magnitude in a binary format.
-2.  **Pure PyTorch Embeddings:**
-    * Replaced the complex CUDA matrix multiplications with simple memory lookups using PyTorch's `EmbeddingBag` layers.
+### // Key Engineering Decisions
 
-### // Experimental Results (UNSW-NB15)
+#### 1. Thermometer Encoding
+- **Problem:** Raw numerical values and frequency counts do not translate well into binary representations.
+- **Solution:** Used **thermometer encoding**, where magnitude is represented by contiguous bits.
 
-I trained the model on the **UNSW-NB15** Network Intrusion Dataset, a modern benchmark for cyberattacks.
+Example:
+- Count = 3 → `11100`
+- Count = 4 → `11110`
 
-| Metric | Result | Analysis |
-| :--- | :--- | :--- |
-| **Accuracy** | **78.72%** | Strong baseline for a non-deep model. |
-| **Training Time** | **< 2 min** | Extremely fast convergence compared to LSTMs. |
-| **Hardware** | **CPU Only** | Verified zero GPU usage during inference. |
+This preserves similarity in **Hamming space**, which is critical for weightless models.
 
-### // Findings
-The **Dynamic Weightless Network (DWN)** successfully demonstrated that we can perform statistical anomaly detection on low-power edge devices (like IoT gateways or standard VPS instances) without expensive hardware acceleration.
+---
+
+#### 2. Behavioral Input Representation
+Instead of raw sequences, behavior is summarized using:
+- Sliding windows over system-call traces
+- Bag-of-events (histogram-style aggregation)
+- Binary encoding suitable for lookup-based learning
+
+This makes the model robust to small variations while capturing statistical behavior.
+
+---
+
+#### 3. Differentiable Training via EFD
+Lookup tables are discrete and non-differentiable by nature.  
+To enable training, I implemented **Extended Finite Difference (EFD)**, which approximates gradients by considering the influence of nearby binary addresses in the lookup table.
+
+This allows:
+- Gradient-based optimization during training
+- Pure lookup-table inference during deployment
+
+---
+
+### // Experimental Setup
+
+- **Dataset:** UNSW-NB15 (used as an initial controlled benchmark)
+- **Model:** Multi-discriminator DWN (Normal vs Attack)
+- **Training Mode:** Normal-only behavioral learning
+- **Hardware:** CPU-only (no GPU dependency)
+
+The focus of this phase was **architecture validation**, not metric optimization.
+
+---
+
+### // Observations & Learnings
+
+- Weightless models can learn **behavioral patterns** without deep neural networks.
+- Binary encodings strongly influence model stability and learning quality.
+- Training is fast and lightweight compared to traditional deep learning.
+- Understanding *why* the system works is more important than raw accuracy at this stage.
+
+---
+
+### // Reflection (Honest)
+> This work represents an **exploratory research phase**.  
+> My understanding is currently **conceptual and surface-level**, but structured.  
+> The main outcome is clarity on how kernel behavior, binary representations, and lightweight ML models connect.
+
+---
 
 ### // Next Steps
-* Integrate this Python model into the C-based `sentinel-sandbox` using the Python C API.
-* Test against live `ptrace` data from the Linux Kernel.
+- Integrate DWN input directly with **real Linux syscall traces** via `ptrace`
+- Study anomaly scoring rather than classification accuracy
+- Perform controlled experiments on normal vs abnormal program behavior
 
 ```
