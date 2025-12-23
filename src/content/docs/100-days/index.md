@@ -7,7 +7,7 @@ sidebar:
 
 > **Goal:** Building a hardened Linux environment, security tools, and automation scripts from scratch.  
 > **Tech Stack:** Linux (Ubuntu), Bash, UFW, OpenSSH, Python.  
-> **Current Status:** <span style="color:#39FF14; font-weight:bold;">🟢 Active (Day 9/100)</span>
+> **Current Status:** <span style="color:#39FF14; font-weight:bold;">🟢 Active (Day 10/100)</span>
 
 ## 📂 Progress Log
 
