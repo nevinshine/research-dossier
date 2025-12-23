@@ -75,4 +75,17 @@ Its primary purpose is to:
 - understand low-level program behavior
 - study lightweight ML techniques
 - explore the intersection of systems security and machine learning
+
+---
+
+### // Experimental Finding: Temporal Structure Matters
+Initial experiments using syscall frequency histograms showed limited separation between benign and abnormal executions. While syscall counts capture *what* operations occur, they fail to capture *when* they occur.
+
+To address this, Sentinel introduced **temporal bucketing**, where each syscall window is divided into ordered segments and processed independently.
+
+This change significantly improved anomaly score separation without modifying the underlying Weightless Neural Network.
+
+**Implication:**  
+Effective syscall-based detection depends more on **behavioral representation** than on model complexity.
+
 ---

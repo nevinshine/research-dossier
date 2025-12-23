@@ -13,6 +13,7 @@ sidebar:
 
 | Day | Topic | Description | Status |
 | :--- | :--- | :--- | :--- |
+| **Day 10** | Temporal Feature Engineering | Improving Syscall Anomaly Detection via Temporal Bucketing | <span style="color:#39FF14; font-weight:bold;">Completed</span> |
 | **Day 09** | Research Consolidation | Sentinel Sandbox Architecture & Understanding | <span style="color:#39FF14; font-weight:bold;">Completed</span> |
 | **Day 08** | AI Anomaly Detection | CPU-Optimized Weightless Neural Network | <span style="color:#39FF14; font-weight:bold;">Completed</span> |
 | **Day 07** | Fail2Ban | Automated Intrusion Prevention System | <span style="color:#39FF14; font-weight:bold;">Completed</span> |
@@ -26,6 +27,45 @@ sidebar:
 ---
 
 ## Detailed Operations Log
+
+### Day 10: Temporal Feature Engineering (Research)
+- **Context:**  
+  Initial anomaly detection experiments using syscall *frequency-only* histograms showed heavy overlap between normal and abnormal behavior. While the system functioned end-to-end, the representation lacked temporal context.
+- **Problem Identified:**  
+  Syscall frequency captures *what* happens, but not *when* it happens.  
+  Different behaviors (interactive shell vs stress workloads) can produce similar syscall counts, leading to weak anomaly separation.
+- **Approach Taken:**  
+  Improved the **data representation**, not the ML model.
+  Implemented **temporal bucketing** in the syscall processing pipeline:
+  - Each syscall window is divided into multiple ordered segments
+  - A histogram is computed per segment
+  - Histograms are concatenated to preserve coarse execution order
+- **Implementation Details:**
+  - Modified `SentinelBridge` to support `num_buckets`
+  - Increased input dimensionality from **2688 → 10752 bits**
+  - Left the DWN architecture, EFD training, and classifier unchanged
+  - Retrained the model using only benign syscall traces
+- **Experiment Conducted:**
+  - Scored syscall traces from:
+    - Normal interactive shell activity
+    - Abnormal syscall-intensive workloads
+  - Compared anomaly score distributions between the two cases
+- **Observed Result:**
+  - Normal behavior produced **strongly positive anomaly scores**
+  - Abnormal behavior produced **negative anomaly scores**
+  - Clear distribution shift observed after temporal bucketing
+  - Separation was significantly stronger than the frequency-only baseline
+- **Key Insight:**
+  > Feature representation has a larger impact on syscall-based anomaly detection than model complexity.
+- **Limitations:**
+  - Small sample size (prototype stage)
+  - No detection thresholds or accuracy metrics defined
+  - Results validate architectural direction, not production readiness
+- **Outcome:**  
+  Temporal structure is critical for syscall anomaly detection.  
+  Sentinel Sandbox now demonstrates a meaningful behavioral distinction using a lightweight, CPU-only Weightless Neural Network.
+- **Status:**  
+  <span style="color:#39FF14; font-weight:bold;">Completed</span>
 
 ### Day 9: Research Consolidation & System Understanding
 - **Focus:** Reflection, documentation, and conceptual clarity after building Sentinel Sandbox.
