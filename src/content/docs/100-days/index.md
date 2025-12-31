@@ -7,12 +7,13 @@ sidebar:
 
 > **Goal:** Building a hardened Linux environment, security tools, and automation scripts from scratch.  
 > **Tech Stack:** Linux (Ubuntu), Bash, UFW, OpenSSH, Python.  
-> **Current Status:** <span style="color:#39FF14; font-weight:bold;">🟢 Active (Day 14/100)</span>
+> **Current Status:** <span style="color:#39FF14; font-weight:bold;">🟢 Active (Day 15/100)</span>
 
 ## 📂 Progress Log
 
 | Day | Topic | Description | Status |
 | :--- | :--- | :--- | :--- |
+| **Day 15** | Research Logging & Experimental Discipline | Transition from implementation-focused DevSecOps to structured security research methodology | <span style="color:#39FF14; font-weight:bold;">Completed</span> |
 | **Day 14** | Research Environment Stabilization | Native Ubuntu + Sentinel Pipeline Validation | <span style="color:#39FF14; font-weight:bold;">Completed</span> |
 | **Day 13** | Review & Recovery | Review of previous chnages | <span style="color:#39FF14; font-weight:bold;">Completed</span> |
 | **Day 12** | Runtime Anomaly Classification | Threshold-calibrated syscall behavior decision logic | <span style="color:#39FF14; font-weight:bold;">Completed</span> |
@@ -31,6 +32,9 @@ sidebar:
 ---
 
 ## Detailed Operations Log
+
+### Day 15 — Research Logging & Pipeline Stabilization  
+  Consolidated Sentinel Sandbox into a reproducible research pipeline by validating data ingestion (`sentinel_log.csv` → `.npy`), fixing module import boundaries, aligning model architecture with saved checkpoints, and formalizing experiment outputs (scores, thresholds, classification). Established structured research logging to bridge DevSecOps practice with security research methodology.
 
 ### Day 14: Research Environment Stabilization
 - **Problem:** VM-based development introduced performance overhead and instability during syscall tracing and ML experiments.

@@ -150,3 +150,18 @@ This setup reflects realistic deployment constraints for:
 
 Environment stability is now sufficient for extended experimentation and analysis.
 
+---
+
+### Research Phase Transition
+
+As of Day 15, Sentinel Sandbox has entered the **research phase**.
+
+All subsequent work follows:
+- hypothesis-driven experiments
+- logged observations
+- reproducible configurations
+
+Sentinel is no longer treated as a feature-driven system,
+but as a syscall-based anomaly detection research platform.
+
+
