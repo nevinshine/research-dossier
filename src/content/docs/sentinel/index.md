@@ -22,7 +22,7 @@ By modeling **patterns of syscall usage**, it is possible to distinguish normal 
 
 ---
 
-### // Why System Calls?
+### Why System Calls?
 - Syscalls represent **ground-truth behavior**
 - They cannot be obfuscated away
 - Even packed or encrypted malware must interact with the kernel
@@ -132,4 +132,21 @@ On live syscall traces:
 **Key Insight:**  
 Accurate behavioral detection depends more on **representation and calibration** than on model complexity.
 
+---
+
+### Research Environment Status
+
+As of Day 14 of the DevSecOps research track, Sentinel Sandbox operates on a **native Ubuntu 22.04 environment** with a CPU-only machine learning stack.
+
+Key properties:
+- No virtualization overhead
+- No GPU or CUDA dependency
+- Fully reproducible syscall-to-score pipeline
+
+This setup reflects realistic deployment constraints for:
+- Edge systems
+- VPS environments
+- Security research workloads
+
+Environment stability is now sufficient for extended experimentation and analysis.
 
