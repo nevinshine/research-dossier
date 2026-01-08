@@ -4,15 +4,13 @@ description: Research Notebook of Nevin Shine
 template: splash
 hero:
   tagline: Systems Security Research • Linux Kernel • Runtime Verification
-  image:
-    file: ../../assets/houston.webp
   actions:
     - text: View Sentinel Architecture
-      link: /sentinel-architecture/
+      link: /runtime-security-dossier/sentinel-architecture/
       icon: right-arrow
       variant: primary
     - text: Ptrace Mechanics
-      link: /ptrace-mechanics/
+      link: /runtime-security-dossier/ptrace-mechanics/
       icon: external
 ---
 
@@ -20,12 +18,12 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Research Domains
 
-<CardGrid stagger>
+<CardGrid>
 	<Card title="Sentinel Architecture" icon="rocket">
 		Design specifications for **Sentinel Runtime**.
 		<br/>
-		- [Active Policy Enforcement](/sentinel-architecture/architecture)
-		- [Memory Introspection](/sentinel-architecture/experiments)
+		- [Active Policy Enforcement](/runtime-security-dossier/sentinel-architecture/architecture)
+		- [Memory Introspection](/runtime-security-dossier/sentinel-architecture/experiments)
 	</Card>
 	<Card title="Ptrace Mechanics" icon="magnifier">
 		Low-level documentation on the Linux `ptrace` API.

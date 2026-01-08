@@ -1,167 +1,58 @@
 ---
-title: Sentinel Sandbox
-description: A kernel-level behavioral analysis system using ptrace-based syscall interception and Weightless Neural Networks.
-sidebar:
-  order: 1
+title: Sentinel Architecture
+description: Technical specification of the Sentinel Runtime Verification System
 ---
 
-### Project Overview
-**Sentinel Sandbox** is a research-oriented runtime analysis system designed to study **program behavior at the Linux kernel level** using system call (syscall) monitoring and lightweight machine learning.
+## System Overview
 
-Unlike traditional antivirus software that relies on static file signatures (hashes), Sentinel observes **how a program behaves at runtime** by intercepting its interactions with the Linux kernel.
+Sentinel is a lightweight **Runtime Verification System** for Linux. Unlike traditional EDRs (Endpoint Detection and Response) that rely on signature matching or static binary analysis, Sentinel operates on the **Semantic Level**.
 
-The system focuses on **behavioral anomaly detection**, rather than signature matching or static analysis.
+It intercepts the communication between a process and the Linux Kernel to establish a "Behavioral Fingerprint" of execution.
 
----
+### The Three-Layer Design
 
-### Core Hypothesis
-> *"Malicious behavior is better characterized by how a program interacts with the kernel than by how its code appears on disk."*
-
-All programs—benign or malicious—must request services from the kernel using system calls (e.g., `open`, `read`, `write`, `execve`).  
-By modeling **patterns of syscall usage**, it is possible to distinguish normal behavior from anomalous or suspicious execution.
+| Layer | Component | Language | Function |
+| :--- | :--- | :--- | :--- |
+| **0** | **Target** | Binary | The untrusted process (e.g., malware, web server). |
+| **1** | **Interceptor** | C | Attaches via `ptrace`, pauses execution, inspects memory. |
+| **2** | **Brain** | Python | Analyzes syscall sequences using Isolation Forests / DWN. |
 
 ---
 
-### Why System Calls?
-- Syscalls represent **ground-truth behavior**
-- They cannot be obfuscated away
-- Even packed or encrypted malware must interact with the kernel
-- Behavioral patterns remain observable even when code changes
+## Active Defense (v0.7)
 
-Sentinel treats syscall activity as a **behavioral signal**, not a signature.
+As of version v0.7, Sentinel is no longer passive. It implements an **Active Policy Engine**.
 
----
+### The Blocking Mechanism
+When a malicious syscall is detected (e.g., `openat` on `/etc/passwd`), Sentinel does not kill the process. Instead, it performs a **Register Rewrite**:
 
-### Technology Stack
+1.  **Trap:** The process stops at Syscall Entry.
+2.  **Inspect:** Sentinel reads `RDI/RSI` registers to see arguments.
+3.  **Decide:** Policy Engine flags the arguments as `BANNED`.
+4.  **Intervene:** Sentinel writes `-1` into the `ORIG_RAX` register.
+5.  **Resume:** The kernel sees syscall `-1` (invalid), returns `ENOSYS`, and the process continues without accessing the file.
 
-| Component | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Interceptor** | **C / ptrace** | Attaches to processes and intercepts system calls at syscall entry points |
-| **Behavior Bridge** | **Python 3** | Converts syscall streams into structured, binary representations |
-| **Detection Engine** | **Weightless Neural Network (DWN/WiSARD)** | Learns statistical patterns of normal behavior using lookup-table-based learning |
-| **Execution Model** | **Bare Metal (User Space)** | No kernel modules, no virtualization, minimal system interference |
+```c
+// Code Snippet: The Neutralization Logic
+if (is_malicious(path)) {
+    regs.orig_rax = -1; // <--- The "Jedi Mind Trick"
+    ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+}
 
-> *Note:* The current implementation operates on the host system using `ptrace`. Containerization and isolation are considered future extensions.
-
----
-
-### Research Goals
-1. **Behavioral Detection:**  
-   Detect anomalous program execution based on syscall behavior rather than file signatures.
-
-2. **Lightweight ML:**  
-   Explore **Weightless Neural Networks** as an alternative to deep learning for runtime security tasks.
-
-3. **CPU-Only Operation:**  
-   Design a system that functions without GPUs or hardware acceleration.
-
-4. **Kernel-Level Fidelity:**  
-   Preserve accurate syscall semantics while minimizing analysis overhead.
+```
 
 ---
 
-### Research Status
-- ✔ Syscall interception validated on real Linux programs
-- ✔ End-to-end pipeline from kernel tracing to ML training completed
-- ✔ Differentiable Weightless Neural Network (DWN) integrated
-- 🔜 Anomaly scoring and evaluation experiments in progress
+## Memory Introspection
 
----
+To understand *intent*, we must look beyond numbers. Sentinel uses `PTRACE_PEEKDATA` to extract string arguments from the child's virtual memory space.
 
-### Scope & Intent
-Sentinel Sandbox is a **research and learning platform**, not a production malware sandbox.
+* **Challenge:** The child's memory is isolated.
+* **Solution:** We read word-by-word (8 bytes) at the address found in `RSI` until we hit a `NULL` terminator.
 
-Its primary purpose is to:
-- understand low-level program behavior
-- study lightweight ML techniques
-- explore the intersection of systems security and machine learning
+### Current Capabilities
 
----
-
-### Experimental Finding: Temporal Structure Matters
-Initial experiments using syscall frequency histograms showed limited separation between benign and abnormal executions. While syscall counts capture *what* operations occur, they fail to capture *when* they occur.
-
-To address this, Sentinel introduced **temporal bucketing**, where each syscall window is divided into ordered segments and processed independently.
-
-This change significantly improved anomaly score separation without modifying the underlying Weightless Neural Network.
-
-**Implication:**  
-Effective syscall-based detection depends more on **behavioral representation** than on model complexity.
-
----
-
-### Runtime Anomaly Classification (Threshold-Calibrated)
-
-After training the Weightless Neural Network (DWN) on **normal syscall behavior only**, Sentinel introduces a **statistical decision layer** to convert raw model scores into actionable security signals.
-
-Rather than relying on labeled attack data, Sentinel uses **distribution-based calibration**:
-
-1. Collect anomaly scores from normal execution traces
-2. Estimate the score distribution (mean, standard deviation)
-3. Define decision thresholds using statistical deviation
-
-#### Threshold Levels
-| Severity | Definition |
-|--------|------------|
-| **NORMAL** | Score ≥ μ − 1σ |
-| **SUSPICIOUS** | μ − 2σ ≤ Score < μ − 1σ |
-| **ANOMALOUS** | μ − 3σ ≤ Score < μ − 2σ |
-| **CRITICAL** | Score < μ − 3σ |
-
-This approach mirrors how real intrusion detection systems operate:  
-**model behavior first, enforce policy later**.
-
-#### Runtime Classification
-Each syscall window is evaluated independently and assigned a severity class in real time:
-
-- NORMAL → expected execution
-- SUSPICIOUS → behavioral deviation
-- ANOMALOUS → likely misuse or exploit behavior
-- CRITICAL → severe deviation requiring intervention
-
-This completes Sentinel’s detection loop:
-> kernel trace → feature encoding → ML inference → calibrated decision
-
-#### Experimental Outcome
-On live syscall traces:
-- Most windows classified as **NORMAL**
-- Natural variance appears as **SUSPICIOUS**
-- Rare **ANOMALOUS** windows detected
-- No false **CRITICAL** escalation during benign runs
-
-**Key Insight:**  
-Accurate behavioral detection depends more on **representation and calibration** than on model complexity.
-
----
-
-### Research Environment Status
-
-As of Day 14 of the DevSecOps research track, Sentinel Sandbox operates on a **native Ubuntu 22.04 environment** with a CPU-only machine learning stack.
-
-Key properties:
-- No virtualization overhead
-- No GPU or CUDA dependency
-- Fully reproducible syscall-to-score pipeline
-
-This setup reflects realistic deployment constraints for:
-- Edge systems
-- VPS environments
-- Security research workloads
-
-Environment stability is now sufficient for extended experimentation and analysis.
-
----
-
-### Research Phase Transition
-
-As of Day 15, Sentinel Sandbox has entered the **research phase**.
-
-All subsequent work follows:
-- hypothesis-driven experiments
-- logged observations
-- reproducible configurations
-
-Sentinel is no longer treated as a feature-driven system,
-but as a syscall-based anomaly detection research platform.
-
+* [x] **Syscall Identity:** Tracking `RAX` numbers.
+* [x] **Argument Extraction:** Reading file paths, network IPs.
+* [x] **Policy Enforcement:** Real-time blocking.
 
