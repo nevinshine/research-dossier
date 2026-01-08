@@ -33,6 +33,10 @@ export default defineConfig({
 					label: 'Threat Models',
 					autogenerate: { directory: 'threat-models' },
 				},
+				{
+          			label: 'Research Log',
+          			autogenerate: { directory: 'research-log' },
+               },
 			],
 		}),
 	],
