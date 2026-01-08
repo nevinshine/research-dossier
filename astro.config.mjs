@@ -3,11 +3,11 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://nevinshine.github.io',
-  base: '/research-dossier',
+  base: '/runtime-security-dossier',
 
   integrations: [
     starlight({
-      title: 'Research Dossier',
+      title: 'Runtime Security Dossier',
 
       components: {
         Footer: './src/components/Footer.astro',
