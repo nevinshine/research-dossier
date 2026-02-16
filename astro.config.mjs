@@ -4,6 +4,10 @@ import mermaid from 'astro-mermaid';
 
 // https://astro.build/config
 export default defineConfig({
+  // Deployment Configuration for GitHub Pages
+  site: 'https://nevinshine.github.io',
+  base: '/research-dossier', 
+  
   integrations: [
     starlight({
       title: 'Nevin Lab | Systems Security',
@@ -22,30 +26,30 @@ export default defineConfig({
       sidebar: [
         {
           label: '01. The Manifesto',
-          link: '/manifesto', 
+            link: '/manifesto', 
         },
         {
           label: '02. The Architecture',
-          // CHANGED: Explicit list to ensure logical "Story Mode" order
+          // Manual items list for logical "Research Story" flow
           items: [
-            { label: 'Unified Defense Graph', link: '/architecture/unified_map' },
-            { label: 'Sentinel-CC', link: '/architecture/sentinel_cc' },
-            { label: 'Sentinel Runtime', link: '/architecture/sentinel_runtime' },
-            { label: 'Hyperion XDP', link: '/architecture/hyperion' },
-            { label: 'Telos Runtime', link: '/architecture/telos' }, // New Addition
+              { label: 'Unified Defense Graph', link: '/architecture/unified_map' },
+              { label: 'Sentinel-CC', link: '/architecture/sentinel_cc' },
+              { label: 'Sentinel Runtime', link: '/architecture/sentinel_runtime' },
+              { label: 'Hyperion XDP', link: '/architecture/hyperion' },
+              { label: 'Telos Runtime', link: '/architecture/telos' },
           ],
         },
         {
           label: '03. The Engineering',
-          autogenerate: { directory: 'engineering' },
+            autogenerate: { directory: 'engineering' },
         },
         {
           label: '04. The Evidence',
-          autogenerate: { directory: 'evidence' },
+            autogenerate: { directory: 'evidence' },
         },
         {
           label: '05. Lab Notes',
-          autogenerate: { directory: 'log' },
+            autogenerate: { directory: 'log' },
         },
       ],
       customCss: [
