@@ -1,0 +1,44 @@
+/* 1. Center the Hero Section on the Landing Page */
+.md-typeset .hero-section {
+    text-align: center;
+    padding: 4rem 0;
+}
+
+.md-typeset .hero-title {
+    font-size: 3rem;
+    font-weight: 800;
+    background: -webkit-linear-gradient(45deg, #00f260, #0575E6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+}
+
+.md-typeset .hero-subtitle {
+    font-size: 1.5rem;
+    color: #aab4be;
+    margin-bottom: 2rem;
+}
+
+/* 2. Fix Graph Alignment */
+.mermaid {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+    background: rgba(255, 255, 255, 0.05); /* Slight background for visibility */
+    padding: 20px;
+    border-radius: 10px;
+}
+
+/* 3. Make Buttons Look Cool */
+.md-button--primary {
+    background-color: #0575E6 !important;
+    border-color: #0575E6 !important;
+    border-radius: 50px;
+    padding: 0.8rem 2rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.md-button--primary:hover {
+    box-shadow: 0 0 15px #0575E6;
+}
