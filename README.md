@@ -1,49 +1,47 @@
-# Starlight Starter Kit: Basics
+# Nevin Lab: Systems Security Research Dossier
 
 [![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
 
-```
-npm create astro@latest -- --template starlight
-```
+This repository hosts the source code and documentation for the **Nevin Lab Systems Security Dossier**. It bridges the semantic gap between compile-time intent and runtime enforcement through a unified, kernel-native defense quadrant.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## The Research Quadrant
 
-## 🚀 Project Structure
+The dossier documents four distinct enforcement boundaries developed between 2025 and 2026:
 
-Inside of your Astro + Starlight project, you'll see the following folders and files:
+1.  **Sentinel-CC (Build Time):** LLVM-based Policy-Carrying Code. Recently updated to **Phase 2**, featuring Deep CFI (Call-Stack Validation) and ASLR-aware enforcement.
+2.  **Sentinel Runtime (Host):** An eBPF-LSM active defense engine (M8.2 Citadel) featuring recursive "bloodline" process tracking.
+3.  **Hyperion XDP (Network):** A wire-speed network containment satellite achieving ~65 Gbps throughput with zero-copy telemetry.
+4.  **Telos (AI Agent):** A teleological runtime preventing Indirect Prompt Injection (IPI) via kernel-level intent verification.
 
-```
+## Project Structure
+
+This project is built with **Astro Starlight** and utilizes a research-first directory structure:
+
+```text
 .
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
+├── src/content/docs/
+│   ├── architecture/   # System design & Unified Defense Graph
+│   ├── engineering/    # Implementation details (LLVM, eBPF, XDP)
+│   ├── evidence/       # Performance benchmarks & Threat models
+│   └── log/            # Lab Notes & Research Journal (Feb 2026 Sprint)
+├── astro.config.mjs    # Configured with /research-dossier base path
+└── .github/workflows/  # Automated deployment to GitHub Pages
+
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+## Genie Commands
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+| Command | Action |
+| --- | --- |
+| `npm install` | Installs research portal dependencies |
+| `npm run dev` | Starts local research environment |
+| `npm run build` | Compiles the dossier for production |
+| `npm run preview` | Previews the built dossier locally |
 
-Static assets, like favicons, can be placed in the `public/` directory.
+## Current Research Focus (Feb 14-15 Sprint)
 
-## 🧞 Commands
+The latest engineering logs document the completion of **Sentinel-CC Phase 2**. This milestone successfully implemented eBPF stack-walking to neutralize Return-Oriented Programming (ROP) attacks by validating syscall callers against compiler-generated metadata.
 
-All commands are run from the root of the project, from a terminal:
+---
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+**Nevin Shine** // Systems Security Research
