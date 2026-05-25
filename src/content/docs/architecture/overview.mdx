@@ -1,0 +1,77 @@
+---
+title: "Architecture Overview"
+description: "Sentinel Stack unified defense architecture — deterministic, kernel-native defense from Ring -1 to Layer 7."
+view: architect
+order: 1
+---
+
+# Sentinel Stack Architecture
+
+### Deterministic, Kernel-Native Defense from Ring -1 to Layer 7
+
+The Sentinel Stack is a unified, kernel-native defense quadrant designed to bridge the **semantic gap** between a program's compile-time intent and its runtime enforcement. It establishes a deterministic, cross-layer defense architecture spanning from Ring -1 hardware virtualization up to Layer 7 MCP (Model Context Protocol) semantics.
+
+---
+
+## The Core Problem
+
+Traditional security tools trust the operating system. If a rootkit takes over the kernel, the security tool is blind. If an AI agent is tricked by a prompt injection, containerization cannot stop it from exfiltrating secrets using trusted system binaries like `curl`.
+
+**The Sentinel Stack eliminates these assumptions.** It deploys independent enforcement at every hardware and software layer simultaneously:
+
+- **Below the kernel** — A hypervisor introspection engine monitors the OS from Ring -1. Even a fully compromised kernel cannot detect or disable it.
+- **Inside the kernel** — eBPF-LSM hooks intercept every `execve()`, `connect()`, and `file_open()` system call, enforcing taint-aware Information Flow Control.
+- **At the network card** — XDP programs drop malicious packets at wire-speed before the Linux network stack even sees them.
+- **At compile time** — An LLVM-based policy-carrying code compiler and Z3 formal verification mathematically prove safety before deployment.
+- **In the verification pipeline** — LLVM IR static analysis with SMT-backed memory safety checks and ring-aware attestation policies enforce deterministic trust.
+
+> The primary assumption of the Sentinel Stack is that the host kernel is compromised. Security is enforced from a higher privilege level than the attack surface.
+
+---
+
+## Semantic-to-Execution Pipeline
+
+The critical innovation of the Sentinel Stack is the **semantic-to-execution pipeline** — a system where natural language security intents declared by users or AI agents are mathematically translated into kernel enforcement policies:
+
+1. **Intent Declaration** — An AI agent or user declares security intent in natural language
+2. **Cortex Processing** — The Telos Cortex engine parses intent, executes Domain Intelligence (L0-L4 classification), and identifies threats
+3. **Policy Translation** — `telos-lang` compiler translates high-level policy into Z3-verified eBPF bytecode
+4. **Kernel Enforcement** — eBPF-LSM hooks enforce policies at Ring 0 with O(1) deterministic lookups
+5. **Wire-Speed Drop** — Malicious IPs are pushed to Hyperion XDP for sub-microsecond packet filtering at the NIC
+
+---
+
+## Cross-Layer Signal Flow
+
+```
+AI Agent declares intent
+  -> Telos Cortex evaluates domain reputation (out-of-path)
+  -> Resolves malicious IPs
+  -> RPC push to Hyperion XDP (:9095/block)
+  -> XDP_DROP at wire-speed (before sk_buff allocation)
+  -> Zero bytes leave the machine
+```
+
+When Ring -1 detects a rootkit:
+```
+VMI detects sys_call_table modification
+  -> Hardware #NPF fault
+  -> Task walker identifies malicious PID
+  -> vmi_alert_map propagation
+  -> Hyperion XDP: XDP_DROP all packets from PID
+  -> Telos Runtime: Network Slam (-EPERM)
+  -> Zero bytes leave the machine
+```
+
+---
+
+## Design Principles
+
+| Principle | Implementation |
+|:----------|:--------------|
+| Zero Trust | Every layer assumes lower layers are compromised |
+| Out-of-Band Enforcement | VMI operates from Ring -1, outside the guest's trust boundary |
+| Deterministic O(1) | All ALLOW/DENY decisions are pure hash table lookups |
+| Fail-Closed | Unknown states default to DENY in all rings |
+| Version-Locked | Documentation is mathematically tied to Git commit hashes |
+| LLM Out-of-Path | AI evaluation never enters the kernel hot path |

@@ -1,0 +1,23 @@
+---
+title: "Live Telemetry Dashboard"
+description: "Real-time Hyperion XDP throughput and LRU eviction streams via WebSocket bridge."
+view: debugger
+order: 3
+---
+
+# Live Lab Telemetry
+
+### Real-Time Sentinel Stack Verification
+
+This dashboard bridges the theoretical capabilities of the Sentinel Stack with empirical execution reality. It establishes a WebSocket connection directly to the lab's Prometheus/Grafana instance to stream live eBPF metrics.
+
+---
+
+## Execution Metrics
+
+The graphs below display a live feed of:
+- **NIC Throughput:** The wire-speed packet processing rate at the XDP hook, before `sk_buff` allocation.
+- **LRU Map Evictions:** The automatic purging rate of the `flow_map` (`BPF_MAP_TYPE_LRU_HASH`) under high network load.
+- **Telos Drops:** The rate of packets dropped by Hyperion XDP resulting from Telos AI domain intelligence evaluations.
+
+> If the Lab API is unreachable from your current network zone, the dashboard will gracefully degrade and render an offline simulation to demonstrate visual fidelity.

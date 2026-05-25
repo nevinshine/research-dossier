@@ -1,0 +1,16 @@
+{
+  "baseUrl": "/engineering/api/",
+  "linkSuffix": "",
+  "linkLowercase": true,
+  "copyImages": false,
+  "folderClasses": "Classes",
+  "folderFiles": "Files",
+  "folderGroups": "Modules",
+  "folderNamespaces": "Namespaces",
+  "indexClasses": "Classes",
+  "indexFiles": "Files",
+  "indexGroups": "Modules",
+  "indexNamespaces": "Namespaces",
+  "useFolders": false,
+  "indexInFolders": false
+}

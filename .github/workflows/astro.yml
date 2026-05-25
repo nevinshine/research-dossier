@@ -35,6 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Detect package manager
         id: detect-package-manager
         run: |
@@ -63,6 +65,50 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen
+      - name: Run Doxygen
+        run: doxygen Doxyfile
+      - name: Install Doxybook2
+        run: |
+          wget https://github.com/matusnovak/doxybook2/releases/download/v1.5.0/doxybook2-linux-amd64-v1.5.0.zip
+          unzip doxybook2-linux-amd64-v1.5.0.zip
+          sudo mv bin/doxybook2 /usr/local/bin/
+      - name: Run Doxybook2
+        run: |
+          mkdir -p src/content/docs/generated/c
+          doxybook2 --input doxygen_output/xml --output src/content/docs/generated/c --config config-doxybook2.json
+
+      - name: Install Gomarkdoc
+        run: go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
+      - name: Run Gomarkdoc
+        run: |
+          mkdir -p src/content/docs/generated/go
+          cd sentinel-stack/hyperion-xdp
+          $(go env GOPATH)/bin/gomarkdoc --output ../../src/content/docs/generated/go/hyperion-xdp.md ./...
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run Rustdoc
+        run: |
+          cd sentinel-stack/sentinel-kv
+          cargo doc --no-deps
+          mkdir -p ../../public/rustdoc
+          cp -r target/doc/* ../../public/rustdoc/
+
+      - name: Install pydoc-markdown
+        run: pip install pdoc pydoc-markdown
+      - name: Run pydoc-markdown
+        run: |
+          mkdir -p src/content/docs/generated/python
+          cd sentinel-stack/telos-runtime
+          # Extract documentation using pydoc-markdown
+          python -m pydoc_markdown -p telos_core -I . > ../../src/content/docs/generated/python/telos_core.md || true
+          python -m pydoc_markdown -p cortex -I . > ../../src/content/docs/generated/python/cortex.md || true
+
+      - name: Inject Metadata
+        run: node scripts/inject-metadata.mjs src/content/docs/generated
+
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
         working-directory: ${{ env.BUILD_PATH }}

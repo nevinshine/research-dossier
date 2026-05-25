@@ -1,0 +1,77 @@
+---
+title: "Register Matrices"
+description: "AArch64 hardware register layouts for Stage 2 MMU: VTTBR_EL2, VTCR_EL2, and S2AP permission encoding."
+view: engineer
+component: sentinel-vmi
+order: 2
+---
+
+# AArch64 Register Matrices
+
+## Stage 2 Memory Translation
+
+In AArch64/ARMv8 architectures, the hypervisor operates at EL2 and leverages Stage 2 memory translation. This regime dictates how the hypervisor maps Intermediate Physical Addresses (IPAs) to the actual hardware Physical Addresses (PAs).
+
+**Translation path:** `VA → IPA → PA`
+
+---
+
+## VTTBR_EL2 — Virtualization Translation Table Base Register
+
+The VTTBR_EL2 holds the base address of the translation tables utilized during the Stage 2 walk. It also contains the Virtual Machine Identifier (VMID) for the nested guest.
+
+| Bits | Field | Description |
+|:-----|:------|:-----------|
+| [63:48] | VMID | Virtual Machine Identifier (16-bit when VTCR_EL2.VS=1) |
+| [47:1] | BADDR | Translation Table Base Address (aligned to table size) |
+| [0] | CnP | Common not Private — indicates shared TLB entries across PEs |
+
+> The VMID field width depends on `VTCR_EL2.VS`: 8-bit (bits [55:48]) or 16-bit (bits [63:48]).
+
+---
+
+## VTCR_EL2 — Virtualization Translation Control Register
+
+Controls the translation table walks required for Stage 2 translation of memory accesses from Non-secure EL0 and EL1.
+
+| Bits | Field | Description |
+|:-----|:------|:-----------|
+| [31] | HD | Hardware management of dirty bit state |
+| [30] | HA | Hardware management of Access flag |
+| [29:28] | VS | VMID size: 0=8-bit, 1=16-bit |
+| [21:16] | T0SZ | Size offset of the memory region addressed by VTTBR_EL2 |
+| [15:14] | TG0 | Granule size for VTTBR_EL2: 00=4KB, 01=64KB, 10=16KB |
+| [13:12] | SH0 | Shareability: 00=Non-shareable, 10=Outer, 11=Inner |
+| [11:10] | ORGN0 | Outer cacheability: 00=Non-cacheable, 01=WB-WA |
+| [9:8] | IRGN0 | Inner cacheability: 00=Non-cacheable, 01=WB-WA |
+| [5:0] | SL0 | Starting level of the Stage 2 translation lookup |
+
+---
+
+## S2AP — Stage 2 Access Permissions
+
+The S2AP field in Stage 2 translation table descriptors dictates the read, write, and execute constraints applied to guest memory pages at the hypervisor level. Sentinel VMI enforces these permissions to establish trapping mechanisms.
+
+| S2AP[1:0] | Access | Sentinel VMI Strategy |
+|:----------|:-------|:---------------------|
+| `0b00` | No access | Completely isolates hypervisor pages from guest |
+| `0b01` | Read/Write | Standard memory for general guest data |
+| `0b10` | Read-only | **Enforced on code pages** — traps unauthorized modifications |
+| `0b11` | Read-only | Redundant RO for trap-and-emulate topologies |
+
+---
+
+## The HPFAR_EL2 Permission Fault Anomaly
+
+When a memory access violates S2AP constraints, a synchronous exception routes to EL2.
+
+> **Architectural Errata:** The value of `HPFAR_EL2` becomes UNKNOWN if the Stage 2 fault does not occur during a Stage 1 table walk. This is the case for permission faults. Reading this invalid address causes a hypervisor panic.
+
+**Sentinel VMI Fallback:**
+1. Read faulting VA from `FAR_EL2`
+2. Issue `AT S1E1R` to simulate Stage 1 translation
+3. Extract IPA from `PAR_EL1`
+
+```
+FAR_EL2 → AT S1E1R → PAR_EL1 → IPA
+```

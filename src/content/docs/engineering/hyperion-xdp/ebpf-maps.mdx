@@ -1,0 +1,124 @@
+---
+title: "eBPF Map Topologies"
+description: "Detailed documentation of Hyperion XDP kernel-space BPF map definitions: policy_map, telemetry_ringbuf, flow_map, and alert_ringbuf."
+view: engineer
+component: hyperion-xdp
+order: 2
+---
+
+# eBPF Map Topologies
+
+Hyperion XDP utilizes four distinct eBPF maps to implement stateful, wire-speed network defense. Each map serves a specific role in the packet processing pipeline.
+
+---
+
+## Map Architecture
+
+The following interactive component visualizes the complete map topology defined in `hyperion_core.c`:
+
+---
+
+## Map Definitions
+
+### policy_map — Signature Rule Store
+
+```c
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __type(key, __u32);
+    __type(value, struct policy_t);
+    __uint(max_entries, MAX_RULES);  // MAX_RULES = 2
+} policy_map SEC(".maps");
+```
+
+- **Type:** `BPF_MAP_TYPE_ARRAY` — O(1) indexed lookup by rule number
+- **Capacity:** `MAX_RULES` (compile-time constant, currently 2)
+- **Verifier Safety:** Bounded by `#pragma unroll` loop with `MAX_RULES` iterations
+
+### telemetry_ringbuf — M5 Event Export
+
+```c
+struct {
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, 1 << 16);  // 64KB
+} telemetry_ringbuf SEC(".maps");
+```
+
+- **Type:** `BPF_MAP_TYPE_RINGBUF` — Zero-copy, lockless, single-producer/single-consumer
+- **Capacity:** 64KB (65,536 bytes)
+- **Event Size:** 40 bytes per `hyp_event` struct
+- **Max Events:** ~1,638 events before wrap
+
+### flow_map — Stateful Flow Tracking
+
+```c
+struct {
+    __uint(type, BPF_MAP_TYPE_LRU_HASH);
+    __type(key, struct flow_key);
+    __type(value, struct flow_value);
+    __uint(max_entries, 10000);
+} flow_map SEC(".maps");
+```
+
+- **Type:** `BPF_MAP_TYPE_LRU_HASH` — Automatic eviction of least-recently-used entries
+- **Capacity:** 10,000 concurrent flows
+- **Key:** 5-tuple (`src_ip`, `dst_ip`, `src_port`, `dst_port`, `protocol`)
+- **Eviction:** Automatic when capacity is reached under high network loads
+
+### alert_ringbuf — Legacy Alert Channel
+
+```c
+struct {
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, 1 << 14);  // 16KB
+} alert_ringbuf SEC(".maps");
+```
+
+- **Type:** `BPF_MAP_TYPE_RINGBUF` — Legacy compatibility
+- **Capacity:** 16KB
+- **Status:** Superseded by `telemetry_ringbuf` for M5 structured events
+
+---
+
+## Key Struct Definitions
+
+### struct flow_key (13 bytes)
+
+```c
+struct flow_key {
+    __u32 src_ip;      // Source IP address
+    __u32 dst_ip;      // Destination IP address
+    __u16 src_port;    // Source port
+    __u16 dst_port;    // Destination port
+    __u8  protocol;    // IP protocol number (6=TCP, 17=UDP)
+};
+```
+
+### struct flow_value (32 bytes)
+
+```c
+struct flow_value {
+    __u64 packets;     // Total packet count for this flow
+    __u64 bytes;       // Total byte count for this flow
+    __u64 first_seen;  // Timestamp of first packet (bpf_ktime_get_ns)
+    __u64 last_seen;   // Timestamp of most recent packet
+};
+```
+
+---
+
+## Data Flow
+
+```
+Packet arrives at NIC
+  → XDP hook fires
+  → Parse Eth/IP/TCP headers
+  → Construct flow_key from 5-tuple
+  → flow_map lookup/insert (LRU hash)
+  → policy_map signature check (array)
+  → Match? → telemetry_ringbuf (SIG_MATCH + DROP events)
+           → alert_ringbuf (legacy)
+           → return XDP_DROP
+  → No match? → telemetry_ringbuf (ACCEPT event)
+              → return XDP_PASS
+```

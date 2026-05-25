@@ -1,0 +1,93 @@
+---
+title: "C/Go Struct Alignment"
+description: "Binary parity documentation for the 40-byte hyp_event telemetry struct shared between C kernel space and Go user space."
+view: engineer
+component: hyperion-xdp
+order: 3
+---
+
+# C/Go Struct Alignment
+
+## The Binary Parity Requirement
+
+Because eBPF maps share memory between the C-based kernel space and the Go-based user-space control plane, **any padding discrepancies will result in catastrophic parsing errors**. The `hyp_event` telemetry struct relies on explicit padding fields to maintain 8-byte alignment before the timestamp field.
+
+---
+
+## hyp_event — 40-Byte Telemetry Event
+
+The `hyp_event` struct is the primary telemetry event emitted by the Hyperion XDP kernel program. It must be **exactly 40 bytes** in both C and Go, with identical field offsets.
+
+### C Definition (hyperion_core.c)
+
+```c
+struct hyp_event {
+    __u8  event_type;    // +0  : 0=ACCEPT, 1=DROP, 2=SIG_MATCH
+    __u8  _pad1[3];      // +1  : Padding for 4-byte alignment
+    __u32 src_ip;        // +4  : Source IP address
+    __u32 dst_ip;        // +8  : Destination IP address
+    __u16 src_port;      // +12 : Source port (network byte order)
+    __u16 dst_port;      // +14 : Destination port (network byte order)
+    __u8  protocol;      // +16 : IP protocol number
+    __u8  _pad2[7];      // +17 : Padding for 8-byte alignment
+    __u64 timestamp;     // +24 : bpf_ktime_get_ns() value
+    char  signature[8];  // +32 : Matched signature (if any)
+};                       // Total: 40 bytes
+```
+
+### Go Definition (main.go)
+
+```go
+type HypEvent struct {
+    EventType uint8      // +0  : 0=ACCEPT, 1=DROP, 2=SIG_MATCH
+    _         [3]uint8   // +1  : Padding for alignment
+    SrcIP     uint32     // +4  : Source IP address
+    DstIP     uint32     // +8  : Destination IP address
+    SrcPort   uint16     // +12 : Source port
+    DstPort   uint16     // +14 : Destination port
+    Protocol  uint8      // +16 : IP protocol number
+    _         [7]uint8   // +17 : Padding for 8-byte alignment
+    Timestamp uint64     // +24 : bpf_ktime_get_ns() value
+    Signature [8]byte    // +32 : Matched signature (if any)
+}                        // Total: 40 bytes
+```
+
+---
+
+## Alignment Analysis
+
+| Offset | Size | C Type | Go Type | Field | Notes |
+|:-------|:-----|:-------|:--------|:------|:------|
+| +0 | 1B | `__u8` | `uint8` | event_type | Event classification |
+| +1 | 3B | `__u8[3]` | `[3]uint8` | _pad1 | **Padding** for 4-byte alignment |
+| +4 | 4B | `__u32` | `uint32` | src_ip | Source IP address |
+| +8 | 4B | `__u32` | `uint32` | dst_ip | Destination IP address |
+| +12 | 2B | `__u16` | `uint16` | src_port | Network byte order |
+| +14 | 2B | `__u16` | `uint16` | dst_port | Network byte order |
+| +16 | 1B | `__u8` | `uint8` | protocol | 6=TCP, 17=UDP |
+| +17 | 7B | `__u8[7]` | `[7]uint8` | _pad2 | **Padding** for 8-byte alignment before timestamp |
+| +24 | 8B | `__u64` | `uint64` | timestamp | `bpf_ktime_get_ns()` — nanoseconds since boot |
+| +32 | 8B | `char[8]` | `[8]byte` | signature | Matched signature payload |
+| **+40** | — | — | — | **END** | **Total: 40 bytes** |
+
+---
+
+## Why Padding Matters
+
+The `_pad2[7]` field at offset +17 is critical. Without it:
+
+- The `timestamp` field at offset +24 would start at offset +17 on a non-8-byte boundary
+- On Little Endian (`bpf_bpfel.go`) this causes misaligned reads
+- On Big Endian (`bpf_bpfeb.go`) this causes different byte interpretation
+- The Go `binary.Read()` with `binary.LittleEndian` would parse incorrect values
+
+> Both the C and Go structs are verified by unit tests to ensure they are exactly 40 bytes. Any modification to either struct requires corresponding changes in the other language.
+
+---
+
+## Byte Order Considerations
+
+- **IP addresses** are stored in network byte order (big endian) by the kernel
+- **Ports** are stored in network byte order — the Go control plane swaps bytes: `(port >> 8) | (port << 8)`
+- **Timestamp** is stored in host byte order (little endian on x86_64)
+- **Endianness parity** is maintained across `bpf_bpfel.go` (LE) and `bpf_bpfeb.go` (BE)

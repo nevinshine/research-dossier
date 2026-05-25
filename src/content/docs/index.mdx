@@ -1,34 +1,34 @@
 ---
-title: The Semantic Gap
-description: Systems Security Research Dossier // 2026
+title: Sentinel Stack Knowledge Portal
+description: Welcome to the Sentinel Stack documentation.
 template: splash
 hero:
-  tagline: Bridging Compile-Time Intent and Runtime Enforcement using eBPF, LLVM, and Cryptographic Binding.
+  tagline: Ring -1 to Layer 7 — Every layer is a perimeter.
   actions:
-    - text: Explore the Architecture
-      link: 'architecture/unified_map/'
+    - text: View Architecture Graph
+      link: /architecture/unified-defense-graph/
       icon: right-arrow
       variant: primary
-    - text: View GitHub
-      link: https://github.com/nevinshine
+    - text: GitHub Repository
+      link: https://github.com/nevinshine/sentinel-stack
       icon: external
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## The Research Quadrant
+## System Capabilities
 
-<CardGrid>
-	<Card title="Build Time" icon="pencil">
-		**Sentinel-CC:** LLVM-based Policy Carrying Code.
+<CardGrid stagger>
+	<Card title="Zero-Trust Architecture" icon="shield">
+		Explore the architectural design of the Sentinel Stack, bridging Layer 7 intelligence with Ring -1 execution controls.
 	</Card>
-	<Card title="Runtime Host" icon="setting">
-		**Sentinel Runtime:** eBPF-LSM Process Supervision.
+	<Card title="Kernel-Space Verification" icon="setting">
+		Review SMT proofs and LLVM compiler guarantees enforced at compile-time and load-time.
 	</Card>
-	<Card title="Network Edge" icon="rocket">
-		**Hyperion XDP:** Wire-Speed Packet Containment.
+	<Card title="Wire-Speed Mitigation" icon="rocket">
+		Dive into the eBPF XDP programs configured for O(1) mitigation latency at the NIC boundary.
 	</Card>
-    <Card title="AI Agent" icon="puzzle">
-        **Telos Runtime:** Anti-Prompt-Injection for LLMs.
-    </Card>
+	<Card title="Live Telemetry" icon="magnifier">
+		Monitor active signals, threat anomalies, and real-time event aggregation via the Live Dashboard.
+	</Card>
 </CardGrid>

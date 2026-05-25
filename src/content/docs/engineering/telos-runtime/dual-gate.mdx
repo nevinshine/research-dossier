@@ -1,0 +1,58 @@
+---
+title: "Dual-Gate Architecture"
+description: "Execution Gate and Network Gate eBPF-LSM enforcement with IFC taint tracking."
+view: engineer
+component: telos-runtime
+order: 2
+---
+
+# Dual-Gate Architecture
+
+The Dual-Gate Architecture enforces security at two independent kernel enforcement points simultaneously.
+
+---
+
+## Gate Topology
+
+```
+User Process
+  │
+  ├─ execve("curl") ──────→ EXECUTION GATE ──→ Check intent allowlist
+  │                          lsm/bprm_check_security
+  │                          ├─ Allowed → proceed
+  │                          └─ Denied → return -EPERM
+  │
+  ├─ open("/etc/shadow") ──→ FILE GATE ──→ Elevate taint to CRITICAL
+  │                          lsm/file_open
+  │                          └─ Taint is IRREVERSIBLE
+  │
+  └─ connect(evil.com:443) ──→ NETWORK GATE ──→ Check taint level
+                               lsm/socket_connect
+                               ├─ Clean → allow connection
+                               └─ Tainted → NETWORK SLAM (-EPERM)
+```
+
+---
+
+## eBPF Map Architecture
+
+| Map | Type | Purpose |
+|:----|:-----|:--------|
+| `exec_allowlist` | `BPF_MAP_TYPE_HASH` | Per-intent binary allowlists |
+| `taint_map` | `BPF_MAP_TYPE_LRU_HASH` | PID → taint level mapping |
+| `domain_blocklist` | `BPF_MAP_TYPE_HASH` | Blocked IP addresses |
+| `ifc_policy` | `BPF_MAP_TYPE_HASH` | IFC policy rules |
+
+---
+
+## Network Slam
+
+Network Slam is the **irreversible** enforcement action triggered when a tainted process attempts network access:
+
+1. Process touches sensitive file → taint elevated to `CRITICAL`
+2. Taint is stored in `taint_map` with process PID as key
+3. On `socket_connect`, the gate checks `taint_map[pid]`
+4. If tainted → return `-EPERM` (connection denied)
+5. Taint persists for the **entire lifetime** of the process
+
+> Network Slam cannot be bypassed by the process. The enforcement is in the kernel, at the syscall boundary, before the context switch to the network stack completes.

@@ -1,0 +1,79 @@
+---
+title: "Unified Defense Graph"
+description: "Visual topology of the Sentinel Stack cross-layer enforcement architecture."
+view: architect
+order: 3
+---
+
+# Unified Defense Graph
+
+The following diagram maps the complete enforcement topology of the Sentinel Stack, showing signal flow from Layer 7 AI intelligence down to wire-speed NIC drops.
+
+---
+
+## Architecture Topology
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 7 - AI Intelligence Plane                                │
+│  ┌──────────────┐    ┌─────────────────┐    ┌──────────────┐   │
+│  │ AI Agent     │───▶│ Telos Cortex    │───▶│ DNS Proxy    │   │
+│  │ (Intent)     │    │ Engine          │    │ :5353        │   │
+│  └──────────────┘    │                 │───▶│ Exec LOLBin  │   │
+│                      └────────┬────────┘    └──────────────┘   │
+│                               │ gRPC / Unix Socket              │
+├───────────────────────────────┼─────────────────────────────────┤
+│  Ring 0 - Runtime Enforcement │                                 │
+│                      ┌────────▼────────┐                        │
+│                      │ Telos eBPF      │                        │
+│                      │ Daemon          │                        │
+│                      └────────┬────────┘                        │
+│                               │ Update Maps                     │
+│                      ┌────────▼────────┐                        │
+│                      │ eBPF Hash/LRU   │                        │
+│                      │ Maps            │                        │
+│                      └┬──────┬──── ───┬┘                        │
+│          ┌────────────┘      │        └──────── ──┐             │
+│  ┌───────▼───────┐  ┌──────-─▼───────┐  ┌─────────▼─────────┐   │
+│  │ lsm/bprm_     │  │ lsm/socket_    │  │ lsm/file_open     │   │
+│  │ check_security│  │ connect        │  │ (Dynamic Taint)   │   │
+│  └───────────────┘  └────────────── ─┘  └───────────────────┘   │
+├─────────────────────────────────────────────────────────────────┤
+│  Ring 0 - Compile-Time Verification                             │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
+│  │ telos-lang   │───▶│ Z3 SMT       │───▶│ Verified     │      │
+│  │ Compiler     │    │ Verification │    │ eBPF IR      │      │
+│  └──────────────┘    └──────────────┘    └──────┬───────┘      │
+│                                                  │ LLVM BPF     │
+│                                          ┌───────▼───────┐      │
+│                                          │ Hardened      │      │
+│                                          │ Bytecode      │──────┤
+├──────────────────────────────────────────┴───────────────┴──────┤
+│  Ring -1 - Hypervisor Introspection                             │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
+│  │ Sentinel VMI │───▶│ NPT Guard    │───▶│ sys_call_    │      │
+│  │ Engine       │    │ (HW RO)      │    │ table        │      │
+│  └──────┬───────┘    └──────────────┘    └──────────────┘      │
+│         │ vmi_alert_map                                         │
+├─────────┼───────────────────────────────────────────────────────┤
+│  Wire - NIC Boundary                                            │
+│         │ RPC Push Malicious IPs                                │
+│  ┌──────▼───────┐                        ┌──────────────┐       │
+│  │ Hyperion XDP │──────XDP_DROP─────────▶│ Physical NIC │       │
+│  │ Engine       │                        │              │       │
+│  └──────────────┘                        └──────────────┘       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Signal Propagation Paths
+
+| Source | Destination | Transport | Signal |
+|:-------|:-----------|:----------|:-------|
+| Telos Cortex | Telos eBPF Daemon | gRPC / Unix Socket | Intent declarations, policy updates |
+| Telos Cortex | Hyperion XDP | HTTP RPC (:9095/block) | Malicious IP blacklist |
+| Sentinel VMI | Telos Runtime | vmi_alert_map (eBPF) | Compromised PID + threat level |
+| Sentinel VMI | Hyperion XDP | vmi_alert_map (eBPF) | PID for wire-speed isolation |
+| telos-lang | Telos eBPF Daemon | LLVM BPF bytecode | Verified kernel sandbox |
+| sentinel-kv | Load-Time Checker | Z3 Proof artifacts | Memory safety proofs |

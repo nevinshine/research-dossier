@@ -1,0 +1,46 @@
+# Doxygen Configuration for Sentinel Stack Kernel/C Components
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "Sentinel Stack"
+OUTPUT_DIRECTORY       = doxygen_output
+CREATE_SUBDIRS         = NO
+ALLOW_UNICODE_NAMES    = NO
+OUTPUT_LANGUAGE        = English
+
+# We only want XML output for doxybook2
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_RTF           = NO
+GENERATE_MAN           = NO
+GENERATE_XML           = YES
+XML_OUTPUT             = xml
+XML_PROGRAMLISTING     = NO
+
+# Input directories
+INPUT                  = sentinel-stack/sentinel-vmi/src \
+                         sentinel-stack/sentinel-vmi/include \
+                         sentinel-stack/hyperion-xdp/src/kern
+
+FILE_PATTERNS          = *.c *.h
+RECURSIVE              = YES
+EXCLUDE_SYMLINKS       = YES
+
+# Preprocessor
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+SEARCH_INCLUDES        = YES
+
+# Parsing configuration
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_LOCAL_METHODS  = YES
+EXTRACT_ANON_NSPACES   = YES
+
+# Suppress warnings to avoid breaking CI
+QUIET                  = YES
+WARNINGS               = NO
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = NO
+WARN_NO_PARAMDOC       = NO

@@ -1,0 +1,97 @@
+---
+title: "Hyperion XDP Overview"
+description: "Wire-speed network defense via XDP programs attached to the NIC driver. Sub-microsecond packet filtering with O(1) deterministic lookups."
+view: engineer
+component: hyperion-xdp
+order: 1
+---
+
+# Hyperion XDP
+
+### Wire-Speed Network Defense Engine
+
+Hyperion XDP operates at the lowest point in the Linux network stack — directly within the NIC driver's receive path. By intercepting packets **before the operating system allocates socket buffers** (`sk_buff`), Hyperion guarantees deterministic O(1) enforcement and sub-microsecond latency, completely divorcing network filtering from the host network stack.
+
+---
+
+## How It Works
+
+1. **NIC receives packet** — Raw frame arrives at the network interface
+2. **XDP hook fires** — `hyperion_filter()` executes before `sk_buff` allocation
+3. **Packet parsing** — Ethernet → IP → TCP header traversal with eBPF verifier safety
+4. **Flow tracking** — 5-tuple key inserted into `BPF_MAP_TYPE_LRU_HASH` with atomic counters
+5. **Signature matching** — Payload bytes compared against `policy_map` rules
+6. **Verdict** — `XDP_PASS` (forward to stack) or `XDP_DROP` (discard at NIC)
+7. **Telemetry** — 40-byte `hyp_event` struct pushed to zero-copy ring buffer
+
+---
+
+## Key Capabilities
+
+| Feature | Implementation |
+|:--------|:--------------|
+| Wire-speed drop | `XDP_DROP` at NIC driver receive path |
+| Deep payload inspection | Signature matching against policy_map rules |
+| Stateful flow tracking | `BPF_MAP_TYPE_LRU_HASH` with automatic eviction |
+| Telos RPC bridge | HTTP endpoint on `:9095/block` for malicious IP injection |
+| M5 Telemetry | 40-byte aligned events via `BPF_MAP_TYPE_RINGBUF` (64KB) |
+| C/Go binary parity | Kernel struct and user-space struct verified at 40 bytes |
+| Live reload | `SIGHUP` triggers signature reload without dropping packets |
+| Legacy alerts | Backward-compatible `alert_ringbuf` for DROP events |
+
+---
+
+## XDP Filter Entry Point
+
+The core XDP program is defined in `hyperion_core.c`:
+
+```c
+SEC("xdp")
+int hyperion_filter(struct xdp_md *ctx) {
+    struct cursor c;
+    c.pos = (void *)(long)ctx->data;
+    c.end = (void *)(long)ctx->data_end;
+
+    // 1. Ethernet header
+    struct ethhdr *eth = c.pos;
+    if ((void *)(eth + 1) > c.end) return XDP_PASS;
+
+    // 2. IP header with verifier-safe IHL check
+    struct iphdr *ip = c.pos;
+    if (ip->ihl < 5) return XDP_PASS;
+
+    // 3. TCP header
+    struct tcphdr *tcp = c.pos;
+
+    // 4. Flow tracking via LRU hash map
+    // 5. Signature matching via policy_map array
+    // 6. Telemetry emission via ringbuf
+    // 7. Verdict: XDP_PASS or XDP_DROP
+}
+```
+
+---
+
+## Telos RPC Bridge
+
+When the Telos Cortex engine resolves a domain as malicious (via the L0-L4 classification pipeline), it pushes the resolved IP address directly to Hyperion via HTTP RPC:
+
+```
+POST :9095/block
+Body: {"ip": "97.107.140.81"}
+
+Response: [TELOS-RPC] Added 97.107.140.81 to XDP Blacklist
+```
+
+This ensures that packets from malicious IPs are dropped at **wire-speed** — before they reach the Linux network stack.
+
+---
+
+## Signal Handling
+
+The Go control plane implements graceful signal handling:
+
+| Signal | Action |
+|:-------|:-------|
+| `SIGHUP` | Live-reload signatures from `signatures.txt` or CLI flags without dropping packets |
+| `SIGINT` / `SIGTERM` | Clean shutdown: detach XDP, close ring buffers, exit |

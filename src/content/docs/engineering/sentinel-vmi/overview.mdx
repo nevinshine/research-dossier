@@ -1,0 +1,95 @@
+---
+title: "Sentinel VMI Overview"
+description: "Ring -1 hypervisor introspection engine operating below the OS at AMD-V / ARMv8 EL2."
+view: engineer
+component: sentinel-vmi
+order: 1
+---
+
+# Sentinel VMI
+
+### Ring -1 Hypervisor Introspection Engine
+
+Sentinel VMI operates below the Linux kernel using AMD-V hardware virtualization extensions and ARMv8 EL2 Virtualization Extensions. It assumes the guest OS is already compromised and enforces security from outside the trust boundary.
+
+---
+
+## The Four-Phase Architecture
+
+### Phase 1: Raw Memory Introspection
+- KVM file descriptor management and kvmi-v7 API handshake
+- Raw guest physical memory dump via `kvmi_read_physical()`
+- Page table walker for guest virtual to physical address translation
+
+### Phase 2: Semantic Gap Bridging
+- BTF-first offset loader with kernel-profile fallback for `task_struct` parsing
+- Process list walker from `init_task` through the entire linked list
+- Behavioral analytics: privilege transitions, orphan tasks, fork-bomb patterns
+
+### Phase 3: NPT Guard (Core Innovation)
+- Nested Page Table manipulation via KVM ioctl
+- `sys_call_table` write-protection at hypervisor level
+- `#NPF` trap handler distinguishing legitimate writes from rootkit modifications
+- Multi-region integrity baseline with periodic hash revalidation
+
+### Phase 4: Cross-Layer Bridge
+- Malicious PID propagation via pinned `vmi_alert_map` eBPF map
+- Signal to Hyperion XDP for wire-speed network isolation
+- Signal to Telos Runtime for taint elevation to `TAINT_CRITICAL`
+
+---
+
+## Key Data Structures
+
+### vmi_session
+
+```c
+struct vmi_session {
+    int      kvm_fd;                    // /dev/kvm
+    int      vm_fd;                     // VM file descriptor
+    int      vcpu_fds[VMI_MAX_VCPUS];   // vCPU file descriptors
+    int      nr_vcpus;
+
+    struct vmi_memslot *memslots;       // Guest memory map
+    int      nr_memslots;
+
+    uint64_t syscall_table_gpa;         // sys_call_table GPA
+    uint64_t syscall_table_gva;         // sys_call_table GVA
+    int      npt_armed;                 // 1 if guard active
+
+    uint64_t kaslr_offset;              // KASLR slide
+    uint64_t init_task_addr;            // &init_task (GVA)
+    uint64_t kernel_pgd;               // Guest CR3
+};
+```
+
+### vmi_process
+
+```c
+struct vmi_process {
+    uint64_t task_addr;     // GVA of task_struct
+    uint32_t pid, tgid, ppid;
+    uint32_t uid, gid, euid, egid;
+    char     comm[16];      // Process name
+    uint64_t mm_addr;       // mm_struct pointer
+    uint64_t cap_effective; // Effective capabilities
+};
+```
+
+---
+
+## Heki IPC Protocol
+
+The Heki (Hypervisor-Enforced Kernel Integrity) protocol enables secure communication between Ring 0 components and the Ring -1 hypervisor via a Unix Domain Socket (`/tmp/heki.sock`):
+
+```c
+struct heki_registration {
+    uint32_t magic;     // 0x48454B49 ("HEKI")
+    uint64_t gva;       // Guest Virtual Address to protect
+    uint32_t size;      // Size in bytes
+    uint8_t  is_critical;
+    char     name[32];  // Map name for logging
+} __attribute__((packed));
+```
+
+The hypervisor responds with a **cryptographic nonce** that the kernel component must present via CPUID for subsequent mutations — the **Drawbridge Protocol**.

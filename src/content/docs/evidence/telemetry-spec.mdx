@@ -1,0 +1,77 @@
+---
+title: "Telemetry Specification"
+description: "M5 Hyperion XDP telemetry event format, ring buffer architecture, and Prometheus metrics export."
+view: debugger
+order: 2
+---
+
+# M5 Telemetry Specification
+
+## Hyperion XDP Event Architecture
+
+Hyperion XDP exports structured telemetry via a 40-byte `hyp_event` struct pushed through a zero-copy lockless ring buffer.
+
+---
+
+## Event Types
+
+| Code | Type | Description |
+|:-----|:-----|:-----------|
+| `0` | `ACCEPT` | Packet passed all filters and was forwarded to the stack |
+| `1` | `DROP` | Packet matched a signature rule and was dropped at the NIC |
+| `2` | `SIG_MATCH` | Payload signature match detected (emitted before DROP) |
+
+---
+
+## Event Format
+
+```
+Offset  Size  Field         Description
++0      1B    event_type    0=ACCEPT, 1=DROP, 2=SIG_MATCH
++1      3B    _pad1         Padding for alignment
++4      4B    src_ip        Source IP (network byte order)
++8      4B    dst_ip        Destination IP (network byte order)
++12     2B    src_port      Source port (network byte order)
++14     2B    dst_port      Destination port (network byte order)
++16     1B    protocol      IP protocol (6=TCP, 17=UDP)
++17     7B    _pad2         Padding for 8-byte alignment
++24     8B    timestamp     bpf_ktime_get_ns() — nanoseconds since boot
++32     8B    signature     Matched signature payload (null-padded)
++40     --    END           Total: 40 bytes
+```
+
+---
+
+## Ring Buffer Architecture
+
+| Buffer | Type | Size | Event Struct | Purpose |
+|:-------|:-----|:-----|:------------|:--------|
+| `telemetry_ringbuf` | `BPF_MAP_TYPE_RINGBUF` | 64KB | `hyp_event` (40B) | Primary M5 telemetry |
+| `alert_ringbuf` | `BPF_MAP_TYPE_RINGBUF` | 16KB | `event_t` (24B) | Legacy DROP alerts |
+
+---
+
+## Timestamp Conversion
+
+`bpf_ktime_get_ns()` returns nanoseconds since boot, not Unix epoch. The Go control plane converts:
+
+```go
+func calculateBootTimeOffset() error {
+    data, _ := os.ReadFile("/proc/uptime")
+    var uptimeSeconds float64
+    fmt.Sscanf(string(data), "%f", &uptimeSeconds)
+    bootTimeNs := int64(uptimeSeconds * 1e9)
+    bootTimeOffset = time.Now().UnixNano() - bootTimeNs
+    return nil
+}
+```
+
+---
+
+## Demo Telemetry Output
+
+```
+[2026-05-25 11:42:03] ACCEPT 127.0.0.1:58234 -> 127.0.0.1:8080 TCP
+[2026-05-25 11:42:03] SIG_MATCH 127.0.0.1:58234 -> 127.0.0.1:8080 TCP sig="hack"
+[2026-05-25 11:42:03] DROP 127.0.0.1:58234 -> 127.0.0.1:8080 TCP sig="hack"
+```

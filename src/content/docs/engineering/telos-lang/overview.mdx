@@ -1,0 +1,61 @@
+---
+title: "Telos Lang Compiler"
+description: "Rust/LLVM/Z3 policy-as-code compiler with dual-target BPF pipeline and formal verification."
+view: engineer
+component: telos-lang
+order: 1
+---
+
+# Telos Lang
+
+### Formally Verified Policy Compiler
+
+Telos Lang is a Rust-based compiler that translates high-level security intent declarations into Z3-verified eBPF bytecode. It uses Hoare Logic and BitVector analysis to mathematically prove policy safety before kernel deployment.
+
+---
+
+## Dual-Target Pipeline
+
+The compiler generates code for two targets simultaneously in a single compilation pass:
+
+| Target | Architecture | Purpose |
+|:-------|:------------|:--------|
+| x86_64 Host | ELF binary | User-space policy loader and bootstrap |
+| BPF Kernel | eBPF bytecode | Kernel sandbox enforcement |
+
+---
+
+## Compilation Phases
+
+1. **Parsing** — Chumsky parser extracts intent blocks and IFC annotations from `.telos` files
+2. **Type Checking** — Static IFC lattice verification (`Secret<T>`, `Public<T>`, `Tainted<T>`)
+3. **Z3 Verification** — SMT solver proves all eBPF basic blocks are memory-safe
+4. **Code Generation** — LLVM `inkwell` backend emits dual-target IR
+5. **Bootstrap** — `llvm.global_ctors` injector loads eBPF sandbox before `main()`
+
+---
+
+## CLI Interface
+
+```bash
+telosc new <name>       # Create new policy environment
+telosc check <file>     # Static IFC typecheck without compiling
+telosc verify <file>    # Z3 formal verification
+telosc build <file>     # Full compilation to ELF + BPF
+```
+
+---
+
+## IFC Lattice
+
+The Information Flow Control lattice defines how data flows between security levels:
+
+```
+Secret<T>     ← highest security level
+    ↓
+Tainted<T>    ← elevated by sensitive operations
+    ↓
+Public<T>     ← default level, may flow to network
+```
+
+Data flows are only permitted **downward** in the lattice. A `Secret<T>` value cannot be cast to `Public<T>` without explicit **cryptographic declassification** (SHA-256 or AES-GCM boundary casting).

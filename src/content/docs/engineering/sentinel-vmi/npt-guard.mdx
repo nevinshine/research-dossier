@@ -1,0 +1,83 @@
+---
+title: "NPT Guard"
+description: "Nested Page Table write-protection of sys_call_table and #NPF trap handling for rootkit detection."
+view: engineer
+component: sentinel-vmi
+order: 3
+---
+
+# NPT Guard
+
+### Hardware-Enforced sys_call_table Protection
+
+NPT Guard is the core innovation of Sentinel VMI. It leverages AMD-V Nested Page Tables to mark the kernel's `sys_call_table` as **read-only at the hypervisor level**. Any attempt to modify it triggers a hardware `#NPF` (Nested Page Fault) that the hypervisor intercepts and analyzes.
+
+---
+
+## How NPT Guard Works
+
+1. **Resolution** — Resolve `sys_call_table` guest-virtual address (GVA) to guest-physical address (GPA)
+2. **NPT Modification** — Mark the NPT entry for the GPA as read-only via KVM ioctl
+3. **Monitoring** — Any write attempt triggers a hardware `#NPF` fault
+4. **Analysis** — The fault handler classifies the write as legitimate or malicious
+5. **Response** — Malicious writes trigger PID identification and cross-layer signaling
+
+```c
+int npt_guard_arm(struct vmi_session *s);
+void npt_guard_disarm(struct vmi_session *s);
+void npt_guard_handle_events(struct vmi_session *s);
+```
+
+---
+
+## Multi-Region Integrity
+
+NPT Guard can protect multiple kernel regions simultaneously:
+
+| Region | Purpose | Critical |
+|:-------|:--------|:---------|
+| `sys_call_table` | System call dispatch table | Yes |
+| `IDT` | Interrupt Descriptor Table | Yes |
+| `GDT` | Global Descriptor Table | Yes |
+| `LSTAR` | `syscall` entry point MSR | Yes |
+| `kernel_text` | Kernel code segment | Optional |
+
+Each region is baselined with a cryptographic hash and periodically revalidated.
+
+---
+
+## Dynamic Protection (Heki)
+
+The Heki IPC protocol allows Ring 0 components to dynamically request NPT protection for additional memory regions:
+
+```c
+int npt_guard_protect_dynamic(
+    struct vmi_session *s,
+    uint64_t gpa,       // Guest Physical Address
+    uint64_t size,       // Size in bytes
+    int critical,        // Is this a critical region?
+    const char *name     // Region name for logging
+);
+```
+
+When protection succeeds, the hypervisor returns a **cryptographic nonce** via the Heki IPC response. This nonce is required for all subsequent map mutations via the Drawbridge CPUID protocol.
+
+---
+
+## Fault Classification
+
+The `#NPF` handler classifies faults into categories:
+
+| Classification | Action |
+|:--------------|:-------|
+| Legitimate kernel write | Emulate the write and resume guest execution |
+| Rootkit modification | Identify PID, signal cross-layer bridge, log alert |
+| Unknown/suspicious | Escalate to burst detection, increase monitoring frequency |
+
+```c
+void npf_handler_process(
+    struct vmi_session *s,
+    uint64_t gpa,        // Faulting guest physical address
+    int write_access     // 1 if write fault, 0 if read
+);
+```

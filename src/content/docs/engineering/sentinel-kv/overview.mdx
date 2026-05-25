@@ -1,0 +1,57 @@
+---
+title: "Sentinel KV Analyzer"
+description: "Security-focused LLVM IR analyzer with SMT-backed memory safety, Ed25519 attestation, and HITL verification gate."
+view: engineer
+component: sentinel-kv
+order: 1
+---
+
+# Sentinel KV
+
+### Security-Focused LLVM IR Analyzer
+
+Sentinel KV (`skv-analyzer`) is a security-focused LLVM IR analyzer designed for strict attestation, determinism, and ring policy enforcement in kernel and bare-metal environments.
+
+---
+
+## Three-Tier Verification Model
+
+| Tier | Role | Trust Level |
+|:-----|:-----|:-----------|
+| Tier 1 | AI Assistant | **Untrusted** — proposes candidate invariants |
+| Tier 2 | Human Security Gate | **Arbiter** — accepts/rejects VCs |
+| Tier 3 | Z3 SMT Solver | **Absolute** — mathematically proves safety |
+
+> AI is a tool, not a decision maker. Humans gate all proof obligations.
+
+---
+
+## LLVM IR Analysis
+
+| Category | Operations | Failure Mode |
+|:---------|:-----------|:------------|
+| Allocation Provenance | `kmalloc`, `kzalloc`, `kcalloc` | Missing = UNKNOWN |
+| Bounds Checking | `load`, `store`, `memcpy`, `memset` | OOB = FAIL |
+| Temporal Safety | `kfree` double-free, use-after-free | UAF = FAIL |
+| Pointer Tracking | `GEP`, `bitcast`, `ptrtoint`, `inttoptr` | Unresolvable = UNKNOWN |
+
+---
+
+## Ring Policies
+
+| Ring | Behavior | Requirement |
+|:-----|:---------|:-----------|
+| `ring0` | Standard verdict | Default rules |
+| `ring-1` | `UNKNOWN` → `FAIL` | Ed25519 attestation token |
+| `ring-2` | `UNKNOWN` → `FAIL` | Independent root trust + separate key chain |
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|:-----|:--------|
+| `0` | Pass — all checks satisfied |
+| `10` | Fail — memory safety violation |
+| `20` | Unknown — unresolvable analysis |
+| `1` | Runtime/internal error |
