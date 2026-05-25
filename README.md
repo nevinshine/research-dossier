@@ -1,47 +1,58 @@
-# Nevin Lab: Systems Security Research Dossier
+# Sentinel Stack Research Dossier
 
 [![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+[![Deploy to GitHub Pages](https://github.com/nevinshine/research-dossier/actions/workflows/astro.yml/badge.svg)](https://github.com/nevinshine/research-dossier/actions/workflows/astro.yml)
 
-This repository hosts the source code and documentation for the **Nevin Lab Systems Security Dossier**. It bridges the semantic gap between compile-time intent and runtime enforcement through a unified, kernel-native defense quadrant.
+This repository serves as the central knowledge portal for the **Sentinel Stack**, a unified systems security architecture bridging the semantic gap between compile-time intent and runtime enforcement.
 
-## The Research Quadrant
+Read the full documentation at: **[nevinshine.github.io/research-dossier/](https://nevinshine.github.io/research-dossier/)**
 
-The dossier documents four distinct enforcement boundaries developed between 2025 and 2026:
+## The Four-Pillar Architecture
 
-1.  **Sentinel-CC (Build Time):** LLVM-based Policy-Carrying Code. Recently updated to **Phase 2**, featuring Deep CFI (Call-Stack Validation) and ASLR-aware enforcement.
-2.  **Sentinel Runtime (Host):** An eBPF-LSM active defense engine (M8.2 Citadel) featuring recursive "bloodline" process tracking.
-3.  **Hyperion XDP (Network):** A wire-speed network containment satellite achieving ~65 Gbps throughput with zero-copy telemetry.
-4.  **Telos (AI Agent):** A teleological runtime preventing Indirect Prompt Injection (IPI) via kernel-level intent verification.
+The dossier documents four distinct security boundaries enforcing deterministic execution from Ring -1 to Layer 7:
+
+1. **Sentinel-CC (Compile-Time):** Proof-Carrying Code (PCC) and LLVM IR analysis ensuring absolute memory safety and invariant guarantees for legacy C drivers before kernel admission.
+2. **Sentinel Runtime (Ring 0):** An eBPF-LSM active defense engine featuring deterministic thread-level policy enforcement and granular resource access controls.
+3. **Hyperion XDP (Network Boundary):** A wire-speed network containment satellite achieving O(1) mitigation latency directly at the NIC level.
+4. **Telos (AI Agent Security):** A teleological runtime safeguarding autonomous AI agents against Indirect Prompt Injection (IPI) by routing intent through rigorous dual-gate verifiers.
+
+## Automated AST Extraction Pipeline
+
+This repository acts as an aggregator. It does not store the core engineering source code; instead, it uses Git Submodules to pull the execution components and dynamically generates Abstract Syntax Tree (AST) documentation at build time.
+
+The GitHub Actions CI/CD pipeline automatically runs:
+- `cargo doc` (for Rust components like `skv-analyzer`)
+- `doxygen` + `doxybook2` (for C/eBPF components like `hyperion-xdp` and `sentinel-vmi`)
+- `pydoc-markdown` (for Python components like the `telos-runtime` Cortex)
+
+All extracted metadata is converted into Markdown, enriched with Starlight frontmatter, and deployed seamlessly to GitHub Pages.
 
 ## Project Structure
-
-This project is built with **Astro Starlight** and utilizes a research-first directory structure:
 
 ```text
 .
 ├── src/content/docs/
 │   ├── architecture/   # System design & Unified Defense Graph
-│   ├── engineering/    # Implementation details (LLVM, eBPF, XDP)
-│   ├── evidence/       # Performance benchmarks & Threat models
-│   └── log/            # Lab Notes & Research Journal (Feb 2026 Sprint)
-├── astro.config.mjs    # Configured with /research-dossier base path
-└── .github/workflows/  # Automated deployment to GitHub Pages
-
+│   ├── engineering/    # Implementation deep-dives per pillar
+│   ├── evidence/       # Performance benchmarks & Security telemetry
+│   ├── generated/      # Auto-generated AST docs (CI/CD injected)
+│   └── manifesto.md    # The Semantic Gap philosophy
+├── sentinel-stack/     # Git Submodule for core repositories
+├── astro.config.mjs    # Starlight portal configuration
+└── .github/workflows/  # Automated deployment & AST extraction pipeline
 ```
 
-## Genie Commands
+## Local Development
 
-| Command | Action |
-| --- | --- |
-| `npm install` | Installs research portal dependencies |
-| `npm run dev` | Starts local research environment |
-| `npm run build` | Compiles the dossier for production |
-| `npm run preview` | Previews the built dossier locally |
+To run the documentation portal locally:
 
-## Current Research Focus (Feb 14-15 Sprint)
+```bash
+# Install dependencies
+npm install
 
-The latest engineering logs document the completion of **Sentinel-CC Phase 2**. This milestone successfully implemented eBPF stack-walking to neutralize Return-Oriented Programming (ROP) attacks by validating syscall callers against compiler-generated metadata.
+# Pull the core submodules for AST generation
+git submodule update --init --recursive
 
----
-
-**Nevin Shine** // Systems Security Research
+# Start the Astro dev server
+npm run dev
+```
