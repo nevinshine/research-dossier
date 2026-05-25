@@ -56,7 +56,11 @@ generated: true
 
   // If frontmatter doesn't exist, prepend it
   if (!content.startsWith('---')) {
-    newContent = frontmatter + content;
+    // Remove the first H1 heading from body since Starlight renders the title from frontmatter
+    if (titleMatch) {
+      newContent = content.replace(/^#\s+.*$/m, '').replace(/^\n+/, '\n');
+    }
+    newContent = frontmatter + newContent;
     fs.writeFileSync(filePath, newContent, 'utf-8');
     console.log(`Injected metadata into ${filePath}`);
   }

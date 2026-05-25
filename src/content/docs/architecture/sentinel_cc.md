@@ -2,9 +2,6 @@
 title: Sentinel-CC
 description: Policy-Carrying Code (Phase 2)
 ---
-
-# Sentinel-CC: Policy-Carrying Code
-
 **Current Status:** Phase 2 Complete (ASLR + Deep CFI)
 
 Sentinel-CC eliminates the semantic gap between "what the compiler sees" and "what the kernel executes." Instead of relying on external policy files (which can be tampered with), Sentinel embeds the security policy **directly into the binary** during compilation.

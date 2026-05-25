@@ -5,9 +5,6 @@ view: engineer
 component: sentinel-vmi
 order: 3
 ---
-
-# NPT Guard
-
 ### Hardware-Enforced sys_call_table Protection
 
 NPT Guard is the core innovation of Sentinel VMI. It leverages AMD-V Nested Page Tables to mark the kernel's `sys_call_table` as **read-only at the hypervisor level**. Any attempt to modify it triggers a hardware `#NPF` (Nested Page Fault) that the hypervisor intercepts and analyzes.

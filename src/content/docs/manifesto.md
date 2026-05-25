@@ -2,9 +2,6 @@
 title: The Manifesto
 description: The Semantic Gap and Research Vision
 ---
-
-# The Semantic Gap
-
 **Systems Security Research Dossier // 2026**
 
 :::tip[Research Statement]

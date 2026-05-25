@@ -5,9 +5,6 @@ view: engineer
 component: hyperion-xdp
 order: 3
 ---
-
-# C/Go Struct Alignment
-
 ## The Binary Parity Requirement
 
 Because eBPF maps share memory between the C-based kernel space and the Go-based user-space control plane, **any padding discrepancies will result in catastrophic parsing errors**. The `hyp_event` telemetry struct relies on explicit padding fields to maintain 8-byte alignment before the timestamp field.

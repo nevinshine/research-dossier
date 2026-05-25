@@ -5,9 +5,6 @@ view: engineer
 component: hyperion-xdp
 order: 1
 ---
-
-# Hyperion XDP
-
 ### Wire-Speed Network Defense Engine
 
 Hyperion XDP operates at the lowest point in the Linux network stack — directly within the NIC driver's receive path. By intercepting packets **before the operating system allocates socket buffers** (`sk_buff`), Hyperion guarantees deterministic O(1) enforcement and sub-microsecond latency, completely divorcing network filtering from the host network stack.
