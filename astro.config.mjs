@@ -35,11 +35,11 @@ export default defineConfig({
         label: '02. The Architecture',
         // Manual items list for logical "Research Story" flow
         items: [
-            { label: 'Unified Defense Graph', link: '/architecture/unified_map' },
-            { label: 'Sentinel-CC', link: '/architecture/sentinel_cc' },
-            { label: 'Sentinel Runtime', link: '/architecture/sentinel_runtime' },
-            { label: 'Hyperion XDP', link: '/architecture/hyperion' },
-            { label: 'Telos Runtime', link: '/architecture/telos' },
+            { label: 'Unified Defense Graph', link: 'architecture/unified-defense-graph' },
+            { label: 'Sentinel-CC', link: 'architecture/sentinel_cc' },
+            { label: 'Sentinel Runtime', link: 'architecture/sentinel_runtime' },
+            { label: 'Hyperion XDP', link: 'architecture/hyperion' },
+            { label: 'Telos Runtime', link: 'architecture/telos' },
         ],
       },
       {

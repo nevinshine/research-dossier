@@ -24,6 +24,35 @@
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", "Fira Code", monospace;
 }
 
+/* ─── Starlight Theme Overrides ─── */
+:root {
+  --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-mono);
+  --sl-color-bg: var(--color-terminal-base);
+  --sl-color-bg-nav: var(--color-terminal-surface);
+  --sl-color-bg-sidebar: var(--color-terminal-surface);
+  --sl-color-bg-inline-code: var(--color-terminal-surface-raised);
+  --sl-color-text: var(--color-terminal-fg);
+  --sl-color-text-accent: var(--color-terminal-accent);
+  --sl-color-accent: var(--color-terminal-accent);
+  --sl-color-accent-low: rgba(58, 217, 0, 0.2);
+  --sl-color-accent-high: #4DFF0A;
+  --sl-color-gray-1: #ffffff;
+  --sl-color-gray-2: var(--color-terminal-fg);
+  --sl-color-gray-3: var(--color-terminal-muted);
+  --sl-color-gray-4: var(--color-terminal-border);
+  --sl-color-gray-5: var(--color-terminal-surface-hover);
+  --sl-color-gray-6: var(--color-terminal-surface);
+}
+
+:root[data-theme="light"] {
+  /* Force dark mode colors for terminal aesthetic even in light mode */
+  --sl-color-bg: var(--color-terminal-base);
+  --sl-color-bg-nav: var(--color-terminal-surface);
+  --sl-color-bg-sidebar: var(--color-terminal-surface);
+  --sl-color-text: var(--color-terminal-fg);
+}
+
 /* ─── Base Layer ─── */
 html {
   scroll-behavior: smooth;
