@@ -10,56 +10,62 @@ The following diagram maps the complete enforcement topology of the Sentinel Sta
 
 ## Architecture Topology
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Layer 7 - AI Intelligence Plane                                │
-│  ┌──────────────┐    ┌─────────────────┐    ┌──────────────┐   │
-│  │ AI Agent     │───▶│ Telos Cortex    │───▶│ DNS Proxy    │   │
-│  │ (Intent)     │    │ Engine          │    │ :5353        │   │
-│  └──────────────┘    │                 │───▶│ Exec LOLBin  │   │
-│                      └────────┬────────┘    └──────────────┘   │
-│                               │ gRPC / Unix Socket              │
-├───────────────────────────────┼─────────────────────────────────┤
-│  Ring 0 - Runtime Enforcement │                                 │
-│                      ┌────────▼────────┐                        │
-│                      │ Telos eBPF      │                        │
-│                      │ Daemon          │                        │
-│                      └────────┬────────┘                        │
-│                               │ Update Maps                     │
-│                      ┌────────▼────────┐                        │
-│                      │ eBPF Hash/LRU   │                        │
-│                      │ Maps            │                        │
-│                      └┬──────┬──── ───┬┘                        │
-│          ┌────────────┘      │        └──────── ──┐             │
-│  ┌───────▼───────┐  ┌──────-─▼───────┐  ┌─────────▼─────────┐   │
-│  │ lsm/bprm_     │  │ lsm/socket_    │  │ lsm/file_open     │   │
-│  │ check_security│  │ connect        │  │ (Dynamic Taint)   │   │
-│  └───────────────┘  └────────────── ─┘  └───────────────────┘   │
-├─────────────────────────────────────────────────────────────────┤
-│  Ring 0 - Compile-Time Verification                             │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
-│  │ telos-lang   │───▶│ Z3 SMT       │───▶│ Verified     │      │
-│  │ Compiler     │    │ Verification │    │ eBPF IR      │      │
-│  └──────────────┘    └──────────────┘    └──────┬───────┘      │
-│                                                  │ LLVM BPF     │
-│                                          ┌───────▼───────┐      │
-│                                          │ Hardened      │      │
-│                                          │ Bytecode      │──────┤
-├──────────────────────────────────────────┴───────────────┴──────┤
-│  Ring -1 - Hypervisor Introspection                             │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
-│  │ Sentinel VMI │───▶│ NPT Guard    │───▶│ sys_call_    │      │
-│  │ Engine       │    │ (HW RO)      │    │ table        │      │
-│  └──────┬───────┘    └──────────────┘    └──────────────┘      │
-│         │ vmi_alert_map                                         │
-├─────────┼───────────────────────────────────────────────────────┤
-│  Wire - NIC Boundary                                            │
-│         │ RPC Push Malicious IPs                                │
-│  ┌──────▼───────┐                        ┌──────────────┐       │
-│  │ Hyperion XDP │──────XDP_DROP─────────▶│ Physical NIC │       │
-│  │ Engine       │                        │              │       │
-│  └──────────────┘                        └──────────────┘       │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph L7 ["Layer 7 - AI Intelligence Plane"]
+        AIAgent["AI Agent<br/>(Intent)"]
+        Cortex["Telos Cortex<br/>Engine"]
+        DNS["DNS Proxy<br/>:5353"]
+        Exec["Exec LOLBin"]
+        
+        AIAgent --> Cortex
+        Cortex --> DNS
+        Cortex --> Exec
+    end
+
+    subgraph R0R ["Ring 0 - Runtime Enforcement"]
+        eBPFDaemon["Telos eBPF<br/>Daemon"]
+        eBPFMaps["eBPF Hash/LRU<br/>Maps"]
+        LSM1["lsm/bprm_<br/>check_security"]
+        LSM2["lsm/socket_<br/>connect"]
+        LSM3["lsm/file_open<br/>(Dynamic Taint)"]
+
+        eBPFDaemon -- "Update Maps" --> eBPFMaps
+        eBPFMaps --> LSM1
+        eBPFMaps --> LSM2
+        eBPFMaps --> LSM3
+    end
+
+    Cortex -- "gRPC / Unix Socket" --> eBPFDaemon
+
+    subgraph R0C ["Ring 0 - Compile-Time Verification"]
+        TelosLang["telos-lang<br/>Compiler"]
+        Z3["Z3 SMT<br/>Verification"]
+        VerifiedIR["Verified<br/>eBPF IR"]
+        HardenedBytecode["Hardened<br/>Bytecode"]
+
+        TelosLang --> Z3
+        Z3 --> VerifiedIR
+        VerifiedIR -- "LLVM BPF" --> HardenedBytecode
+    end
+
+    subgraph RMinus1 ["Ring -1 - Hypervisor Introspection"]
+        SentinelVMI["Sentinel VMI<br/>Engine"]
+        NPTGuard["NPT Guard<br/>(HW RO)"]
+        SysCallTable["sys_call_<br/>table"]
+
+        SentinelVMI --> NPTGuard
+        NPTGuard --> SysCallTable
+    end
+
+    subgraph NIC ["Wire - NIC Boundary"]
+        HyperionXDP["Hyperion XDP<br/>Engine"]
+        PhysicalNIC["Physical NIC"]
+
+        HyperionXDP -- "XDP_DROP" --> PhysicalNIC
+    end
+
+    SentinelVMI -- "vmi_alert_map<br/>RPC Push Malicious IPs" --> HyperionXDP
 ```
 
 ---
