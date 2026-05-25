@@ -110,9 +110,9 @@ jobs:
         run: |
           mkdir -p src/content/docs/generated/python
           cd sentinel-stack/telos-runtime
-          # Extract documentation using pydoc-markdown
-          python -m pydoc_markdown -p telos_core -I . > ../../src/content/docs/generated/python/telos_core.md || true
-          python -m pydoc_markdown -p cortex -I . > ../../src/content/docs/generated/python/cortex.md || true
+          # Extract documentation using pydoc-markdown CLI directly
+          pydoc-markdown -p telos_core -I . > ../../src/content/docs/generated/python/telos_core.md || true
+          pydoc-markdown -p cortex -I . > ../../src/content/docs/generated/python/cortex.md || true
 
       - name: Inject Metadata
         run: node scripts/inject-metadata.mjs src/content/docs/generated
