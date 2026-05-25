@@ -23,6 +23,7 @@ INPUT                  = sentinel-stack/sentinel-vmi/src \
 FILE_PATTERNS          = *.c *.h
 RECURSIVE              = YES
 EXCLUDE_SYMLINKS       = YES
+EXCLUDE                = sentinel-stack/hyperion-xdp/src/kern/vmlinux.h
 
 # Preprocessor
 ENABLE_PREPROCESSING   = YES
