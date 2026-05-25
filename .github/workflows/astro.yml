@@ -91,10 +91,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Run Rustdoc
         run: |
-          cd sentinel-stack/sentinel-kv
+          cd sentinel-kv
           cargo doc --no-deps
-          mkdir -p ../../public/rustdoc
-          cp -r target/doc/* ../../public/rustdoc/
+          mkdir -p ../public/rustdoc
+          cp -r target/doc/* ../public/rustdoc/
 
       - name: Install pydoc-markdown
         run: pip install pdoc pydoc-markdown

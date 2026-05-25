@@ -1,3 +1,6 @@
 [submodule "sentinel-stack"]
 	path = sentinel-stack
 	url = https://github.com/nevinshine/sentinel-stack.git
+[submodule "sentinel-kv"]
+	path = sentinel-kv
+	url = https://github.com/nevinshine/sentinel-kv.git
