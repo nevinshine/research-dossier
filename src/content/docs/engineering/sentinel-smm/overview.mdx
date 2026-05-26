@@ -1,0 +1,34 @@
+---
+title: Sentinel SMM Overview
+description: Architecture and design of the Ring -2 Firmware Supervisor.
+---
+
+# Ring -2 Firmware Supervisor
+
+The **Sentinel SMM (System Management Mode)** module operates at the absolute lowest execution layer (Ring -2) of the x86 architecture. It serves as a firmware-level supervisor designed to enforce a zero-trust policy model before the Operating System or Hypervisor ever boots.
+
+## Threat Model: The Bootkit
+
+Modern advanced persistent threats (APTs) are moving below the OS layer. Vulnerabilities like **SinkClose** allow attackers to install rootkits into the motherboard's SPI Flash. Once a bootkit is installed in System Management Mode, it becomes entirely invisible to Ring -1 (Hypervisors) and Ring 0 (OS Kernels).
+
+## The SMM Sandbox
+
+`sentinel-smm` neutralizes this threat by establishing a hardware-enforced sandbox around third-party SMI (System Management Interrupt) handlers. 
+
+### Core Capabilities:
+
+1. **Hardware `#GP` Traps**: 
+   Sentinel SMM modifies the hardware environment to enforce a `General Protection Fault` whenever an SMI handler attempts to execute a highly privileged instruction, such as `WRMSR` (Write Model Specific Register) or `IN/OUT` port commands.
+   
+2. **$\mathcal{O}(1)$ Bitmap Policy Engine**:
+   To prevent the SMM handler from stalling the OS (which causes noticeable system jitter or crashes), the policy engine is built using an ultra-low latency 8KB bitmap. Every single I/O port validation is executed in $\mathcal{O}(1)$ time.
+
+3. **SPI Flash Defense**:
+   Sentinel strictly mediates transactions to the motherboard's SPI flash chip. Only cryptographically verified data placed in the `SentinelSharedBuffer` is allowed to be written, making it physically impossible for compromised OS kernels to flash malicious bootkits.
+
+## Technical Implementation
+
+The supervisor is implemented using **EDK II** (UEFI DXE) and pure x86 Assembly.
+
+* **Trap Handler (`SentinelSmmTrap.nasm`)**: An assembly stub that captures the 15 General Purpose Registers (GPRs) and forces a transition to the C-based policy engine.
+* **Policy Matrix (`SentinelSmmDxe.c`)**: Evaluates the intercepted instruction and either allows it or halts the system depending on the strict "Default Deny" profile.
