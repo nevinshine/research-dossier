@@ -20,8 +20,8 @@ Modern advanced persistent threats (APTs) are moving below the OS layer. Vulnera
 1. **Hardware `#GP` Traps**: 
    Sentinel SMM modifies the hardware environment to enforce a `General Protection Fault` whenever an SMI handler attempts to execute a highly privileged instruction, such as `WRMSR` (Write Model Specific Register) or `IN/OUT` port commands.
    
-2. **$\mathcal{O}(1)$ Bitmap Policy Engine**:
-   To prevent the SMM handler from stalling the OS (which causes noticeable system jitter or crashes), the policy engine is built using an ultra-low latency 8KB bitmap. Every single I/O port validation is executed in $\mathcal{O}(1)$ time.
+2. **O(1) Bitmap Policy Engine**:
+   To prevent the SMM handler from stalling the OS (which causes noticeable system jitter or crashes), the policy engine is built using an ultra-low latency 8KB bitmap. Every single I/O port validation is executed in O(1) time.
 
 3. **SPI Flash Defense**:
    Sentinel strictly mediates transactions to the motherboard's SPI flash chip. Only cryptographically verified data placed in the `SentinelSharedBuffer` is allowed to be written, making it physically impossible for compromised OS kernels to flash malicious bootkits.
